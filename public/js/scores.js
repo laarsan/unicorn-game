@@ -2,7 +2,7 @@
 // (data/scores.json) with a localStorage fallback so the game still works when
 // opened as a plain file or from a browser that can't reach the API.
 
-import { STORAGE_KEYS } from './config.js';
+import { STORAGE_KEYS, LEGACY_STORAGE_KEYS } from './config.js';
 
 const MAX_SCORES = 10;
 
@@ -21,6 +21,18 @@ function writeLocal(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
     console.warn('localStorage write failed', key, err);
+  }
+}
+
+// Drop data written under an older storage namespace so a fresh version of
+// the game looks unplayed (no "continue on level N", no stale local top list).
+export function forgetLegacyStorage() {
+  for (const key of LEGACY_STORAGE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch (err) {
+      console.warn('localStorage cleanup failed', key, err);
+    }
   }
 }
 

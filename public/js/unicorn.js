@@ -39,6 +39,10 @@ export class Unicorn {
     this.hurtFlash = 0;
     this.ducking = false;
     this.duckAmount = 0;
+    // The gallop phase is accumulated per frame (not t × frequency): with a
+    // changing speed the product would jump and make the legs flicker.
+    this.gallopPhase = 0;
+    this.danceTime = 0;
     this.build();
   }
 
@@ -150,7 +154,10 @@ export class Unicorn {
   // t = seconds, speed = world speed, airborne = jumping, y = jump height
   animate(t, dt, { speed, airborne, y, ducking, hurt, celebrating }) {
     const gallopHz = Math.max(0.6, speed / 5.5);
-    const phase = t * gallopHz * Math.PI * 2;
+    this.gallopPhase = (this.gallopPhase + gallopHz * Math.PI * 2 * dt) % (Math.PI * 2);
+    const phase = this.gallopPhase;
+    this.danceTime = celebrating ? this.danceTime + dt : 0;
+    const dance = this.danceTime;
     // legs
     for (const leg of this.legs) {
       const offset = leg.userData.front ? 0 : Math.PI;
@@ -158,7 +165,8 @@ export class Unicorn {
       if (airborne) {
         leg.rotation.x = THREE.MathUtils.lerp(leg.rotation.x, leg.userData.front ? -0.9 : 0.8, dt * 10);
       } else if (celebrating) {
-        leg.rotation.x = Math.sin(t * 12 + offset) * 0.5;
+        // happy prancing: front legs kick high, back legs skip
+        leg.rotation.x = Math.sin(dance * 14 + offset + side) * (leg.userData.front ? 0.9 : 0.5);
       } else {
         leg.rotation.x = Math.sin(phase + offset + side) * 0.5;
       }
@@ -166,8 +174,22 @@ export class Unicorn {
     // body bob + pitch
     const bob = airborne ? 0 : Math.abs(Math.sin(phase)) * 0.12;
     const pitch = airborne ? THREE.MathUtils.clamp(-0.35 + y * 0.12, -0.35, 0.25) : Math.sin(phase) * 0.06;
-    this.body.position.y = bob + (celebrating ? Math.abs(Math.sin(t * 8)) * 0.5 : 0);
-    this.body.rotation.x = pitch;
+    if (celebrating) {
+      // Victory dance on the spot: hops, a pirouette and a happy wiggle.
+      this.body.position.y = Math.abs(Math.sin(dance * 7)) * 0.55;
+      this.body.rotation.x = -0.15 + Math.sin(dance * 7) * 0.1;
+      this.body.rotation.y = dance * 2.4;
+      this.body.rotation.z = Math.sin(dance * 3.5) * 0.12;
+      this.head.rotation.z = Math.sin(dance * 7) * 0.28;
+    } else {
+      this.body.position.y = bob;
+      this.body.rotation.x = pitch;
+      // shortest way back to facing forward after a pirouette
+      const yaw = THREE.MathUtils.euclideanModulo(this.body.rotation.y + Math.PI, Math.PI * 2) - Math.PI;
+      this.body.rotation.y = THREE.MathUtils.damp(yaw, 0, 10, dt);
+      this.body.rotation.z = THREE.MathUtils.damp(this.body.rotation.z, 0, 10, dt);
+      this.head.rotation.z = THREE.MathUtils.damp(this.head.rotation.z, 0, 10, dt);
+    }
     // ducking squash
     this.duckAmount = THREE.MathUtils.damp(this.duckAmount, ducking ? 1 : 0, 14, dt);
     this.body.scale.y = 1 - this.duckAmount * 0.42;
@@ -183,7 +205,8 @@ export class Unicorn {
     this.tail.forEach((s, i) => {
       const b = s.userData.base;
       const k = i / 6;
-      s.position.set(b.x + Math.sin(t * 5 + k * 2.5) * 0.35 * k, b.y + Math.sin(t * 6.5 + k * 3) * 0.12 * k + (airborne ? k * 0.4 : 0), b.z);
+      const wag = celebrating ? Math.sin(dance * 9 + k * 2) * 0.5 * k : Math.sin(t * 5 + k * 2.5) * 0.35 * k;
+      s.position.set(b.x + wag, b.y + Math.sin(t * 6.5 + k * 3) * 0.12 * k + (airborne ? k * 0.4 : 0) + (celebrating ? k * 0.3 : 0), b.z);
     });
     // horn shimmer
     hornMat.emissiveIntensity = 0.3 + Math.sin(t * 5) * 0.15;

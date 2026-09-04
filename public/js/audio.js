@@ -131,6 +131,22 @@ export class AudioEngine {
     this.noise({ duration: 0.3, gain: 0.05, filterFreq: 8000, q: 0.5 });
   }
 
+  heart() {
+    // warm rising chime – "you got a life back"
+    [[72, 0], [76, 0.08], [79, 0.16], [84, 0.26]].forEach(([n, t]) =>
+      this.tone({ freq: midiToHz(n), type: 'triangle', duration: 0.35, gain: 0.22, start: t, release: 0.25 }));
+    this.tone({ freq: midiToHz(88), type: 'sine', duration: 0.6, gain: 0.12, start: 0.3, release: 0.4 });
+  }
+
+  firework() {
+    // thump + crackle
+    this.noise({ duration: 0.22, gain: 0.3, filterFreq: 700, filterType: 'lowpass', q: 0.8 });
+    this.tone({ freq: 160, slideTo: 50, type: 'sine', duration: 0.25, gain: 0.25 });
+    for (let i = 0; i < 6; i++) {
+      this.noise({ start: 0.08 + Math.random() * 0.35, duration: 0.03, gain: 0.08, filterFreq: 3000 + Math.random() * 3000, q: 1.5 });
+    }
+  }
+
   hit() {
     this.tone({ freq: 300, slideTo: 120, type: 'sawtooth', duration: 0.3, gain: 0.18 });
     this.tone({ freq: midiToHz(64), type: 'triangle', duration: 0.15, gain: 0.15 });

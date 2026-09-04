@@ -1,5 +1,6 @@
 // Particle effects: sparkle trail behind the unicorn, bursts on pickups,
-// confetti at the finish. Cheap CPU-updated buffers – a few hundred particles.
+// confetti and fireworks at the finish. Cheap CPU-updated buffers – a couple
+// of thousand particles at most.
 
 import * as THREE from '../vendor/three.module.js';
 import { PALETTE } from './config.js';
@@ -45,6 +46,9 @@ class ParticleSystem {
     this.gravity = 0;
     this.drag = 1;
     this.scroll = 0;
+    // Additive particles fade out by dimming; normal-blended ones would turn
+    // into black specks against the sky, so they keep their colour and simply vanish.
+    this.dims = additive;
     for (let i = 0; i < count; i++) this.positions[i * 3 + 1] = -100; // hide
   }
 
@@ -70,10 +74,12 @@ class ParticleSystem {
       p[i * 3] += v[i * 3] * dt;
       p[i * 3 + 1] += v[i * 3 + 1] * dt;
       p[i * 3 + 2] += (v[i * 3 + 2] + scrollSpeed) * dt;
-      const fade = this.life[i] / this.maxLife[i];
-      this.colors[i * 3] *= 0.995; this.colors[i * 3 + 1] *= 0.995; this.colors[i * 3 + 2] *= 0.995;
-      if (fade < 0.3) { // dim out the last 30 %
-        this.colors[i * 3] *= 0.9; this.colors[i * 3 + 1] *= 0.9; this.colors[i * 3 + 2] *= 0.9;
+      if (this.dims) {
+        const fade = this.life[i] / this.maxLife[i];
+        this.colors[i * 3] *= 0.995; this.colors[i * 3 + 1] *= 0.995; this.colors[i * 3 + 2] *= 0.995;
+        if (fade < 0.3) { // dim out the last 30 %
+          this.colors[i * 3] *= 0.9; this.colors[i * 3 + 1] *= 0.9; this.colors[i * 3 + 2] *= 0.9;
+        }
       }
     }
     this.geometry.attributes.position.needsUpdate = true;
@@ -92,9 +98,17 @@ export class Effects {
     this.confetti = new ParticleSystem(scene, 500, { size: 0.5, additive: false });
     this.confetti.gravity = 4;
     this.confetti.drag = 0.99;
+    // Normal blending: additive sparks disappear against a bright pastel sky.
+    this.fireworks = new ParticleSystem(scene, 2000, { size: 0.9, additive: false });
+    this.fireworks.gravity = 2.5;
+    this.fireworks.drag = 0.985;
     this.trailAccumulator = 0;
     this.confettiTimer = 0;
     this.confettiOrigin = new THREE.Vector3();
+    this.fireworkTimer = 0;
+    this.nextRocketIn = 0;
+    this.rockets = [];          // rising rockets waiting to burst
+    this.onFireworkBurst = null;
     this.tmp = new THREE.Vector3();
   }
 
@@ -121,7 +135,70 @@ export class Effects {
     this.confettiOrigin.copy(origin);
   }
 
+  // Rockets keep launching for `seconds`; `onBurst(position)` fires per explosion
+  // so the game can play a bang.
+  startFireworks(seconds = 6, onBurst = null) {
+    this.fireworkTimer = seconds;
+    this.nextRocketIn = 0.2;
+    this.onFireworkBurst = onBurst;
+  }
+
+  stopFireworks() {
+    this.fireworkTimer = 0;
+    this.rockets.length = 0;
+  }
+
+  launchRocket() {
+    // Bursts sit above and around the finish gate, inside the camera's view.
+    const x = (Math.random() - 0.5) * 28;
+    const targetY = 6 + Math.random() * 6;
+    const z = -6 - Math.random() * 14;
+    const color = PALETTE.rainbow[Math.floor(Math.random() * PALETTE.rainbow.length)];
+    this.rockets.push({ x, y: 0.5, z, targetY, color, speed: 14 + Math.random() * 6 });
+  }
+
+  burstFirework(r) {
+    const center = this.tmp.set(r.x, r.y, r.z);
+    const second = PALETTE.rainbow[Math.floor(Math.random() * PALETTE.rainbow.length)];
+    for (let i = 0; i < 110; i++) {
+      // uniform directions on a sphere → a round bloom
+      const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2;
+      const rxy = Math.sqrt(1 - u * u);
+      const s = 5 + Math.random() * 4;
+      this.fireworks.emit(center, { x: Math.cos(a) * rxy * s, y: u * s, z: Math.sin(a) * rxy * s }, i % 3 === 0 ? second : r.color, 1.4 + Math.random() * 0.8);
+    }
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 2;
+      this.fireworks.emit(center, { x: Math.cos(a) * s, y: Math.random() * 2, z: Math.sin(a) * s }, 0xfff6a0, 0.8 + Math.random() * 0.6);
+    }
+    if (this.onFireworkBurst) this.onFireworkBurst(center);
+  }
+
+  updateFireworks(dt) {
+    if (this.fireworkTimer > 0) {
+      this.fireworkTimer -= dt;
+      this.nextRocketIn -= dt;
+      if (this.nextRocketIn <= 0) {
+        this.nextRocketIn = 0.3 + Math.random() * 0.4;
+        this.launchRocket();
+        if (Math.random() < 0.35) this.launchRocket(); // sometimes two at once
+      }
+    }
+    for (let i = this.rockets.length - 1; i >= 0; i--) {
+      const r = this.rockets[i];
+      r.y += r.speed * dt;
+      // glowing tail while rising
+      this.tmp.set(r.x + (Math.random() - 0.5) * 0.2, r.y, r.z);
+      this.fireworks.emit(this.tmp, { x: 0, y: -1, z: 0 }, 0xfff1b0, 0.35);
+      if (r.y >= r.targetY) {
+        this.burstFirework(r);
+        this.rockets.splice(i, 1);
+      }
+    }
+  }
+
   update(dt, scrollSpeed) {
+    this.updateFireworks(dt);
     if (this.confettiTimer > 0) {
       this.confettiTimer -= dt;
       for (let i = 0; i < 6; i++) {
@@ -133,5 +210,6 @@ export class Effects {
     this.trail.update(dt, scrollSpeed);
     this.burst.update(dt, scrollSpeed);
     this.confetti.update(dt, 0);
+    this.fireworks.update(dt, 0);
   }
 }

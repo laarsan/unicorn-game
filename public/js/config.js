@@ -17,12 +17,14 @@ export const UNICORN_DUCK_HEIGHT = 1.0;
 export const UNICORN_HALF_DEPTH = 0.9;
 export const INVULNERABLE_SECONDS = 1.5;
 export const HEARTS_PER_LEVEL = 5;
+export const MAX_HEARTS = 7;            // hearts caught on the course can add extra lives up to this
 export const SPEED_RAMP_SECONDS = 1.6;  // ease-in at level start
 
 export const POINTS = {
   star: 10,
   bubble: 25,
   crystal: 50,
+  heart: 100,
   levelClear: 200,
   perHeart: 50,
 };
@@ -32,18 +34,22 @@ export const OBJECT = {
   star:    { y: 1.0, radius: 0.55 },
   airStar: { y: 2.9, radius: 0.55 },
   crystal: { y: 3.0, radius: 0.6 },
-  bubble:  { radius: 0.95 },
+  bubble:  { radius: 0.95 },        // base radius; levels scale it via level.bubbleScale
+  heart:   { y: 1.1, radius: 0.5 },
   rock:    { height: 1.0, halfDepth: 0.6 },
   fence:   { height: 1.35, halfDepth: 0.25 },
   arch:    { clearance: 1.45, halfDepth: 0.35 },
   cloud:   { height: 3.2, halfDepth: 0.8 },
 };
 
+// Storage namespace. Bumping the version gives every browser a fresh start
+// (progress, local top list); the old keys are removed on boot.
 export const STORAGE_KEYS = {
-  progress: 'regnbagsgaloppen.progress',
-  scores: 'regnbagsgaloppen.scores',
-  settings: 'regnbagsgaloppen.settings',
+  progress: 'regnbagsgaloppen.v2.progress',
+  scores: 'regnbagsgaloppen.v2.scores',
+  settings: 'regnbagsgaloppen.v2.settings',
 };
+export const LEGACY_STORAGE_KEYS = ['regnbagsgaloppen.progress', 'regnbagsgaloppen.scores', 'regnbagsgaloppen.settings'];
 
 export const PALETTE = {
   rainbow: [0xff5d8f, 0xff9f43, 0xffe066, 0x7bed9f, 0x70c1ff, 0x9b7bff, 0xff8ad8],

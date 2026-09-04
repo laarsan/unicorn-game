@@ -5,7 +5,7 @@
 import * as THREE from '../vendor/three.module.js';
 import {
   LANE_WIDTH, SPAWN_Z, DESPAWN_Z, GRAVITY, JUMP_VELOCITY, LANE_CHANGE_SPEED, UNICORN_HALF_DEPTH,
-  INVULNERABLE_SECONDS, HEARTS_PER_LEVEL, SPEED_RAMP_SECONDS, POINTS, OBJECT, PALETTE,
+  INVULNERABLE_SECONDS, HEARTS_PER_LEVEL, MAX_HEARTS, SPEED_RAMP_SECONDS, POINTS, OBJECT, PALETTE,
 } from './config.js';
 import { LEVELS, generateCourse, TIPS } from './levels.js';
 import { World } from './world.js';
@@ -13,7 +13,7 @@ import { Unicorn } from './unicorn.js';
 import { createEntity, animateEntity } from './entities.js';
 import { Effects } from './effects.js';
 import { FinishGate, WebSwingers } from './friends.js';
-import { loadScores, saveScore, loadProgress, saveProgress, loadSettings, saveSettings, requestQuit } from './scores.js';
+import { loadScores, saveScore, loadProgress, saveProgress, loadSettings, saveSettings, requestQuit, forgetLegacyStorage } from './scores.js';
 import { VRSupport } from './vr.js';
 
 const CAMERA_POS = new THREE.Vector3(0, 4.3, 8.6);
@@ -21,7 +21,9 @@ const CAMERA_LOOK = new THREE.Vector3(0, 1.6, -7);
 const COUNTDOWN_STEPS = ['3', '2', '1', 'Kör! 🦄'];
 const COUNTDOWN_STEP_SECONDS = 0.75;
 const FINISH_STOP_BEFORE_GATE = 3.2;  // the unicorn halts this far in front of the gate so friends + banner stay in view
-const LEVEL_CLEAR_OVERLAY_DELAY = 1.6;
+const LEVEL_CLEAR_OVERLAY_DELAY = 3.4;  // dance + fireworks play before the result card slides in
+const FIREWORKS_SECONDS = 7;
+const WOW_TEXTS = ['WOW!', 'WOW!', 'SUPER!', 'HURRA!', 'FANTASTISKT!'];
 const TIP_LOOKAHEAD = 55;            // units ahead at which a tip for an object type appears
 const PICKUP_DZ = 1.3;
 const PICKUP_DX = 1.4;
@@ -30,6 +32,7 @@ const HIT_DX = 1.3;
 const SLAM_VELOCITY = -22;           // pressing duck in the air drops the unicorn fast
 const ARCH_TAIL_TOLERANCE = 0.25;    // arch z beyond which standing up again is safe
 const JUMP_CLEAR_TOLERANCE = 0.35;   // feet may be this far below an obstacle's top and still clear it
+const TIP_FOR_TYPE = { rock: 'jump', fence: 'jump', arch: 'duck', bubble: 'bubble', heart: 'heart', cloud: 'cloud' };
 
 export class Game {
   constructor({ canvas, ui, audio, input }) {
@@ -92,6 +95,7 @@ export class Game {
   // ---------- lifecycle ----------
 
   async boot() {
+    forgetLegacyStorage();
     this.scores = await loadScores();
     this.progress = loadProgress();
     this.ui.playerName = this.progress.name || '';
@@ -181,7 +185,9 @@ export class Game {
     this.level = null;
     this.gate.hide();
     this.swingers.setVisible(false);
+    this.effects.stopFireworks();
     this.ui.hideCountdown();
+    this.ui.hideWow();
     this.ui.hideTip();
   }
 
@@ -397,7 +403,7 @@ export class Game {
   spawnAhead() {
     const L = this.level;
     while (L.nextItem < L.course.length && L.course[L.nextItem].d - L.distance < -SPAWN_Z) {
-      const entity = createEntity(L.course[L.nextItem]);
+      const entity = createEntity(L.course[L.nextItem], L.def.bubbleScale);
       L.entities.push(entity);
       this.scene.add(entity.mesh);
       L.nextItem += 1;
@@ -435,8 +441,10 @@ export class Game {
           else hit = P.y < spec.height - JUMP_CLEAR_TOLERANCE;
           if (hit && !hurt) this.hurt(e);
         }
-      } else if (Math.abs(z) < PICKUP_DZ && dx < PICKUP_DX && Math.abs(e.y - bodyY) < PICKUP_DY + (e.isBubble ? 0.4 : 0)) {
-        this.collect(e);
+      } else {
+        // Bubbles are also popped by running through them; their hit box grows with their size.
+        const extra = e.isBubble ? Math.max(0, e.radius - OBJECT.bubble.radius * 0.6) : 0;
+        if (Math.abs(z) < PICKUP_DZ + extra && dx < PICKUP_DX + extra && Math.abs(e.y - bodyY) < PICKUP_DY + extra) this.collect(e);
       }
     }
   }
@@ -445,14 +453,18 @@ export class Game {
     const L = this.level;
     e.active = false;
     const pos = e.mesh.position.clone();
-    let points = POINTS.star, color = 0xffe14a;
+    let points = POINTS.star, color = 0xffe14a, label = null;
     if (e.type === 'bubble') { points = POINTS.bubble; color = 0x9fdcff; this.audio.bubble(); }
     else if (e.type === 'crystal') { points = POINTS.crystal; color = 0x7fd8ff; this.audio.crystal(); }
+    else if (e.type === 'heart') {
+      points = POINTS.heart; color = 0xff5d8f; this.audio.heart();
+      if (L.hearts < MAX_HEARTS) { L.hearts += 1; label = '💖 +1 liv'; }
+    }
     else { this.audio.star(); L.starsGot += 1; }
     L.score += points;
     this.effects.pickupBurst(pos, color, e.type === 'star' || e.type === 'airStar' ? 14 : 24);
     const ndc = pos.project(this.camera);
-    this.ui.popup(`+${points}`, ndc.x, ndc.y);
+    this.ui.popup(label || `+${points}`, ndc.x, ndc.y);
     this.scene.remove(e.mesh);
     const idx = L.entities.indexOf(e);
     if (idx >= 0) L.entities.splice(idx, 1);
@@ -477,7 +489,7 @@ export class Game {
       const it = L.course[i];
       if (it.d < L.distance) break;
       if (it.d > ahead) continue;
-      const tip = it.type === 'rock' || it.type === 'fence' ? 'jump' : it.type === 'arch' ? 'duck' : it.type === 'bubble' ? 'bubble' : null;
+      const tip = TIP_FOR_TYPE[it.type] || null;
       if (tip && L.def.tips.includes(tip)) this.showTipOnce(tip);
     }
   }
@@ -500,7 +512,9 @@ export class Game {
     this.audio.stopMusic();
     this.audio.fanfare();
     this.effects.startConfetti(new THREE.Vector3(0, 2, -2), 3.5);
+    this.effects.startFireworks(FIREWORKS_SECONDS, () => this.audio.firework());
     this.ui.hideTip();
+    this.ui.showWow(WOW_TEXTS[Math.floor(Math.random() * WOW_TEXTS.length)]);
     this.ui.setHud({ hearts: L.hearts, score: this.run.totalScore + L.score, progress: 1 });
   }
 
@@ -515,6 +529,7 @@ export class Game {
     this.gate.group.position.z = -(L.def.length - L.distance);
     if (L.finishing >= LEVEL_CLEAR_OVERLAY_DELAY && this.state === 'levelclear-anim') {
       this.state = 'levelclear';
+      this.ui.hideWow();
       const ratio = L.starsTotal ? L.starsGot / L.starsTotal : 1;
       const stars = ratio >= 0.8 ? 3 : ratio >= 0.45 ? 2 : 1;
       this.run.totalScore += L.score;
@@ -551,6 +566,7 @@ export class Game {
     this.ui.showHud(false);
     this.audio.bigFanfare();
     this.effects.startConfetti(new THREE.Vector3(0, 2, 0), 6);
+    this.effects.startFireworks(FIREWORKS_SECONDS * 2, () => this.audio.firework());
     this.ui.showFinished(this.run.totalScore, this.run.name);
   }
 
@@ -589,6 +605,9 @@ export class Game {
     // pop the first bubble in view
     const bubble = ahead.find((e) => e.isBubble && e.mesh.position.z > -10);
     if (bubble) this.collect(bubble);
+    // steer towards a heart when the lane is otherwise safe
+    const heart = ahead.find((e) => e.type === 'heart' && e.mesh.position.z > -12);
+    if (heart && !blocking(laneOf(heart)) && !inLane(laneOf(heart)).some((e) => e.isObstacle)) P.lane = laneOf(heart);
   }
 }
 

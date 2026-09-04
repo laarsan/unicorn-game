@@ -1,5 +1,5 @@
-// Course objects: collectibles (star, airStar, crystal, bubble) and obstacles
-// (rock, fence, arch, cloud). Shared geometry/materials, one mesh group per
+// Course objects: collectibles (star, airStar, crystal, bubble, heart) and
+// obstacles (rock, fence, arch, cloud). Shared geometry/materials, one mesh group per
 // live entity. Collision maths lives in game.js; this file only builds and
 // animates the meshes.
 
@@ -29,6 +29,24 @@ const bubbleGeo = new THREE.SphereGeometry(OBJECT.bubble.radius, 20, 16);
 const bubbleMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe6ff, emissive: 0x7fc8ff, emissiveIntensity: 0.35, transparent: true, opacity: 0.6, roughness: 0.05, metalness: 0, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, side: THREE.DoubleSide });
 const bubbleRimMat = new THREE.MeshBasicMaterial({ color: 0xff9fe0, transparent: true, opacity: 0.9 });
 const bubbleShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+
+// Heart (extra life): the classic two-lobe outline, extruded like the star.
+const heartShape = (() => {
+  const s = new THREE.Shape();
+  const k = 0.055; // scale of the classic 16×19 heart outline
+  s.moveTo(5 * k, 5 * k);
+  s.bezierCurveTo(5 * k, 5 * k, 4 * k, 0, 0, 0);
+  s.bezierCurveTo(-6 * k, 0, -6 * k, 7 * k, -6 * k, 7 * k);
+  s.bezierCurveTo(-6 * k, 11 * k, -3 * k, 15.4 * k, 5 * k, 19 * k);
+  s.bezierCurveTo(12 * k, 15.4 * k, 16 * k, 11 * k, 16 * k, 7 * k);
+  s.bezierCurveTo(16 * k, 7 * k, 16 * k, 0, 10 * k, 0);
+  s.bezierCurveTo(7 * k, 0, 5 * k, 5 * k, 5 * k, 5 * k);
+  return s;
+})();
+const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.22, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 3 });
+heartGeo.center();
+const heartMat = new THREE.MeshStandardMaterial({ color: 0xff4f8b, emissive: 0xff2d6f, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.1 });
+const heartGlowMat = new THREE.MeshBasicMaterial({ color: 0xffb3d1, transparent: true, opacity: 0.25, depthWrite: false });
 
 const rockGeo = new THREE.DodecahedronGeometry(0.75, 0);
 const rockMat = new THREE.MeshStandardMaterial({ color: 0xb59cd9, roughness: 0.9, flatShading: true });
@@ -70,6 +88,20 @@ const builders = {
     g.position.y = OBJECT.crystal.y;
     g.userData.spin = true;
     g.userData.float = true;
+    return g;
+  },
+  heart() {
+    const g = new THREE.Group();
+    const m = new THREE.Mesh(heartGeo, heartMat);
+    m.rotation.z = Math.PI; // the outline is drawn point-up; flip it
+    g.add(m);
+    const glow = new THREE.Mesh(sphereGeo, heartGlowMat);
+    glow.scale.setScalar(0.85);
+    g.add(glow);
+    g.position.y = OBJECT.heart.y;
+    g.userData.spin = true;
+    g.userData.float = true;
+    g.userData.pulse = true;
     return g;
   },
   bubble() {
@@ -168,11 +200,15 @@ const builders = {
   },
 };
 
-export function createEntity(item) {
+// `bubbleScale` multiplies the bubble size (the calm levels use big bubbles).
+export function createEntity(item, bubbleScale = 1) {
   const mesh = builders[item.type]();
   const x = item.type === 'bubble' ? item.x : laneX(item.lane);
   mesh.position.x = x;
-  if (item.type === 'bubble') mesh.position.y = item.y;
+  if (item.type === 'bubble') {
+    mesh.position.y = item.y;
+    mesh.scale.setScalar(bubbleScale);
+  }
   mesh.userData.baseY = mesh.position.y;
   mesh.userData.phase = Math.random() * Math.PI * 2;
   return {
@@ -180,6 +216,7 @@ export function createEntity(item) {
     lane: item.lane,
     x,
     y: mesh.position.y,
+    radius: item.type === 'bubble' ? OBJECT.bubble.radius * bubbleScale : (OBJECT[item.type].radius || 0),
     mesh,
     d: item.d,
     active: true,
@@ -194,6 +231,10 @@ export function animateEntity(entity, t, dt) {
   if (m.userData.float) {
     m.position.y = m.userData.baseY + Math.sin(t * 2.5 + m.userData.phase) * 0.18;
     entity.y = m.position.y;
+  }
+  if (m.userData.pulse) {
+    const s = 1 + Math.sin(t * 5 + m.userData.phase) * 0.1;
+    m.scale.set(s, s, s);
   }
   if (m.userData.wobble) {
     m.rotation.z = Math.sin(t * 3 + m.userData.phase) * 0.08;

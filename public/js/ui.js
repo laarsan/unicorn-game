@@ -11,7 +11,7 @@ export class UI {
   constructor() {
     this.el = {};
     for (const id of [...SCREENS, 'hud', 'hud-hearts', 'hud-level', 'hud-score', 'hud-progress-fill', 'hud-progress-unicorn',
-      'tip', 'tip-icon', 'tip-text', 'countdown', 'popups', 'name', 'finished-name', 'finished-score', 'menu-scores',
+      'tip', 'tip-icon', 'tip-text', 'countdown', 'wow', 'popups', 'name', 'finished-name', 'finished-score', 'menu-scores',
       'highscore-list', 'levelclear-title', 'levelclear-stars', 'levelclear-text', 'btn-continue', 'continue-level', 'btn-mute', 'btn-vr']) {
       this.el[id] = $(id);
     }
@@ -29,7 +29,9 @@ export class UI {
   showScreen(name) {
     for (const s of SCREENS) this.el[s].classList.toggle('hidden', s !== name);
     if (name === 'menu') setTimeout(() => this.el.name.focus(), 50);
-    if (name === 'finished') setTimeout(() => { this.el['finished-name'].focus(); this.el['finished-name'].select(); }, 50);
+    else if (name === 'finished') setTimeout(() => { this.el['finished-name'].focus(); this.el['finished-name'].select(); }, 50);
+    // Leaving a screen with a text box: give the keys back to the game.
+    else if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
   }
 
   showHud(visible) {
@@ -44,8 +46,11 @@ export class UI {
   setHud({ hearts, score, progress }) {
     if (hearts !== this.lastHearts) {
       const lost = this.lastHearts > hearts && this.lastHearts !== -1;
-      this.el['hud-hearts'].innerHTML = Array.from({ length: HEARTS_PER_LEVEL }, (_, i) =>
-        `<span class="heart ${i < hearts ? '' : 'lost'} ${lost && i === hearts ? 'hit' : ''}">💖</span>`).join('');
+      const gained = this.lastHearts !== -1 && hearts > this.lastHearts;
+      // Extra lives caught on the course add slots beyond the usual five.
+      const slots = Math.max(HEARTS_PER_LEVEL, hearts);
+      this.el['hud-hearts'].innerHTML = Array.from({ length: slots }, (_, i) =>
+        `<span class="heart ${i < hearts ? '' : 'lost'} ${lost && i === hearts ? 'hit' : ''} ${gained && i === hearts - 1 ? 'gained' : ''}">💖</span>`).join('');
       this.lastHearts = hearts;
     }
     const scoreEl = this.el['hud-score'];
@@ -85,6 +90,20 @@ export class UI {
 
   hideCountdown() {
     this.el.countdown.classList.add('hidden');
+  }
+
+  // Big "WOW!" splash when the finish line is crossed.
+  showWow(text) {
+    const w = this.el.wow;
+    w.innerHTML = `<span class="rainbow-text">${escapeHtml(text)}</span>`;
+    w.classList.remove('hidden');
+    w.style.animation = 'none';
+    void w.offsetWidth;
+    w.style.animation = '';
+  }
+
+  hideWow() {
+    this.el.wow.classList.add('hidden');
   }
 
   // Floating "+10" at a screen position (normalised device coords → px).
