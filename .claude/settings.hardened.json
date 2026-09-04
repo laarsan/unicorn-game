@@ -1,0 +1,15 @@
+{
+  "autonomyPosture": "hardened",
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Bash(Invoke-Pester*)",
+      "Bash(pnpm test*)",
+      "Bash(npm test*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "deny": []
+  }
+}

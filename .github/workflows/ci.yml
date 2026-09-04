@@ -1,0 +1,63 @@
+# Process-grind CI: test suite + encoding grind.
+# Activate against a specific repo by copying this template in C1 (setup-script).
+#
+# Cost posture (rules and rationale in docs/agents/ci-cost.md):
+# - ubuntu-latest: Linux minutes bill at 1x (Windows 2x, macOS 10x); pwsh and
+#   Pester are cross-platform, so nothing here needs a Windows runner.
+# - Triggers: push to main + all pull requests. Push and pull_request on the
+#   same branches would run every PR commit twice.
+# - concurrency: a newer push to the same ref cancels the stale in-flight run.
+# - timeout-minutes: caps a hung run at 10 min instead of the 360-min default.
+# - No paths-ignore: the encoding grind validates .md/.yml/.txt files too;
+#   never path-filter away files that CI validates.
+# If a job later genuinely needs a Windows/macOS runner, gate it per changed
+# paths (dorny/paths-filter) plus a weekly scheduled ungated run as drift
+# guard — pattern in docs/agents/ci-cost.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  grind:
+    name: Test + encoding grind
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'tests') -or (Get-ChildItem 'tests' -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue).Count -eq 0) {
+            Write-Host "tests/ absent or empty — skipping Pester"
+            exit 0
+          }
+          if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version -ge [version]'5.0' })) {
+            Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          }
+          $result = Invoke-Pester -Path tests/ -PassThru
+          if ($result.FailedCount -gt 0) { exit 1 }
+
+      - name: Encoding grind (UTF-8 no BOM)
+        shell: pwsh
+        run: |
+          $failed = @()
+          Get-ChildItem -Recurse -Include *.ps1,*.md,*.json,*.yml,*.yaml,*.txt |
+            Where-Object { $_.FullName -notmatch '[/\\](\.git|node_modules)[/\\]' } |
+            ForEach-Object {
+              $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+              if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+                $failed += $_.FullName
+              }
+            }
+          if ($failed.Count -gt 0) {
+            Write-Error "BOM found in:`n$($failed -join "`n")"
+            exit 1
+          }

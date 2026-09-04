@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projektstatusrapport</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f6f8; color: #1a1a2e; line-height: 1.5; padding: 1.5rem;
+  }
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem }
+  h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #334 }
+  .stamp { font-size: 0.78rem; color: #667; margin-bottom: 1.5rem }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem }
+  .card {
+    background: #fff; border-radius: 8px; padding: 1rem 1.2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08)
+  }
+  .gauge-card { text-align: center; padding: 1.5rem 1.2rem }
+  .gauge-pct { font-size: 3rem; font-weight: 800; color: #1a73e8 }
+  .bar-track { background: #e8ecf0; border-radius: 6px; height: 12px; margin: .6rem 0 .4rem }
+  .bar-fill  { background: #1a73e8; border-radius: 6px; height: 12px; width: %BAR_WIDTH% }
+  .formula { font-size: 0.73rem; color: #556; background: #f9fafb; border-radius: 4px; padding: 0.6rem 0.8rem; text-align: left; margin-top: 0.8rem }
+  .focus-text { font-size: 0.9rem; background: #eef4ff; border-left: 3px solid #1a73e8; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; word-break: break-word }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem }
+  .metric  { background: #f4f6f8; border-radius: 5px; padding: 0.5rem 0.6rem }
+  .metric .val { font-size: 1.3rem; font-weight: 700; color: #1a73e8 }
+  .metric .lbl { font-size: 0.72rem; color: #667 }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem }
+  td    { padding: 0.35rem 0.5rem; border-bottom: 1px solid #eef }
+  tr:last-child td { border-bottom: none }
+  .badge      { font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 99px; display: inline-block }
+  .badge.done { background: #d4edda; color: #155724 }
+  .badge.active { background: #cce5ff; color: #004085 }
+  .text-block { font-size: 0.85rem; color: #334 }
+</style>
+</head>
+<body>
+
+<h1>Projektstatusrapport</h1>
+<p class="stamp">Genererad %GENERATED_AT% &mdash; baserad på commit <code>%COMMIT_SHA%</code></p>
+
+<div class="grid">
+
+  <div class="card gauge-card">
+    <h2>Övergripande framdrift</h2>
+    <div class="gauge-pct">%PCT%</div>
+    <div class="bar-track"><div class="bar-fill"></div></div>
+    <div class="formula">%FORMULA%</div>
+  </div>
+
+  <div class="card">
+    <h2>Nuvarande fokus</h2>
+    <div class="focus-text">%CURRENT_FOCUS%</div>
+  </div>
+
+  <div class="card">
+    <h2>Kvoter</h2>
+    <div class="metrics">
+      <div class="metric">
+        <div class="val">%STEPS_DONE% / %STEPS_TOTAL%</div>
+        <div class="lbl">Steg klara</div>
+      </div>
+      <div class="metric">
+        <div class="val">%ISSUES_CLOSED% / %ISSUES_TOTAL%</div>
+        <div class="lbl">Issues stängda</div>
+      </div>
+      <div class="metric">
+        <div class="val">%TRACKS_DONE% / %TRACKS_TOTAL%</div>
+        <div class="lbl">Spår klara</div>
+      </div>
+      <div class="metric">
+        <div class="val">%ADR_COUNT%</div>
+        <div class="lbl">ADR:er</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Testkvalitet</h2>
+    <div class="metrics">
+      <div class="metric">
+        <div class="val">%TEST_STR%</div>
+        <div class="lbl">Pester</div>
+      </div>
+      <div class="metric">
+        <div class="val">%OPEN_BUGS%</div>
+        <div class="lbl">Öppna buggar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fas-status</h2>
+    <table><tbody>%PHASE_ROWS%</tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Blockerare</h2>
+    <div class="text-block">%BLOCKERS%</div>
+  </div>
+
+  <div class="card">
+    <h2>Senaste aktivitet</h2>
+    <div class="text-block">%RECENT_ACTIVITY%</div>
+  </div>
+
+  <div class="card">
+    <h2>Prognos</h2>
+    <div class="text-block">%FORECAST%</div>
+  </div>
+
+  <div class="card">
+    <h2>Hälsa</h2>
+    <div class="text-block">%HEALTH_STATUS%</div>
+  </div>
+
+  <div class="card">
+    <h2>Speglar</h2>
+    <div class="text-block">%MIRROR_FRESHNESS%</div>
+  </div>
+
+</div>
+</body>
+</html>

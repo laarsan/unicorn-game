@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Operation logs (<operation>_log.txt convention: setup_log.txt, completeness_log.txt, ...)
+*_log.txt
+
+# Temp
+temp/*
+!temp/.gitkeep
+data/scores.json
+*.pfx
+cert/
+node_modules/
