@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Regnbågsgaloppen</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🦄%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- in-game HUD -->
+  <div id="hud" class="overlay hidden">
+    <div class="hud-top">
+      <div id="hud-hearts" class="hud-box" aria-label="Hjärtan"></div>
+      <div id="hud-level" class="hud-box"></div>
+      <div id="hud-score" class="hud-box">⭐ 0</div>
+    </div>
+    <div id="hud-progress"><div id="hud-progress-fill"></div><div id="hud-progress-flag">🏁</div><div id="hud-progress-unicorn">🦄</div></div>
+    <div id="tip" class="hidden"><span id="tip-icon"></span><span id="tip-text"></span></div>
+    <div id="countdown" class="hidden"></div>
+    <div id="popups"></div>
+    <button id="btn-pause" class="icon-btn" title="Paus (Esc)">⏸</button>
+  </div>
+
+  <!-- start menu -->
+  <div id="menu" class="overlay screen">
+    <div class="card">
+      <h1 class="title"><span class="rainbow-text">Regnbågsgaloppen</span></h1>
+      <p class="subtitle">🦄 Ett enhörningsäventyr i fem banor 🌈</p>
+      <div class="name-row">
+        <label for="name">Vad heter du?</label>
+        <input id="name" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Skriv ditt namn">
+      </div>
+      <button id="btn-start" class="big primary">▶ Starta äventyret</button>
+      <button id="btn-continue" class="big hidden">⏩ Fortsätt på bana <span id="continue-level">1</span></button>
+      <div class="controls-help">
+        <div><kbd>A</kbd><kbd>D</kbd> eller <kbd>←</kbd><kbd>→</kbd> byt fil</div>
+        <div><kbd>W</kbd><kbd>↑</kbd><kbd>MELLANSLAG</kbd> hoppa</div>
+        <div><kbd>S</kbd><kbd>↓</kbd> ducka</div>
+        <div>🖱️ klicka på bubblorna</div>
+      </div>
+      <div id="menu-scores" class="scores"></div>
+      <div class="row">
+        <button id="btn-mute" class="small">🔊 Ljud på</button>
+        <button id="btn-vr" class="small hidden">🥽 VR</button>
+        <button id="btn-quit" class="small">✖ Avsluta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- pause -->
+  <div id="pause" class="overlay screen hidden">
+    <div class="card">
+      <h2>Paus ⏸</h2>
+      <button id="btn-resume" class="big primary">▶ Fortsätt</button>
+      <button id="btn-pause-menu" class="big">🏠 Till menyn</button>
+    </div>
+  </div>
+
+  <!-- level clear -->
+  <div id="levelclear" class="overlay screen see-through hidden">
+    <div class="card celebrate">
+      <h2 id="levelclear-title">Bana klarad!</h2>
+      <div id="levelclear-stars" class="rating"></div>
+      <p id="levelclear-text" class="big-text"></p>
+      <button id="btn-next" class="big primary">➡ Nästa bana</button>
+    </div>
+  </div>
+
+  <!-- retry -->
+  <div id="retry" class="overlay screen hidden">
+    <div class="card">
+      <h2>Oj! 💫</h2>
+      <p class="big-text">Försök igen – du klarar det!</p>
+      <button id="btn-retry" class="big primary">🔁 Försök igen</button>
+      <button id="btn-retry-menu" class="big">🏠 Till menyn</button>
+    </div>
+  </div>
+
+  <!-- adventure finished -->
+  <div id="finished" class="overlay screen see-through hidden">
+    <div class="card celebrate">
+      <h2>🎉 Du klarade hela äventyret! 🎉</h2>
+      <p id="finished-score" class="big-text"></p>
+      <div class="name-row">
+        <label for="finished-name">Ditt namn på topplistan:</label>
+        <input id="finished-name" maxlength="20" autocomplete="off" spellcheck="false">
+      </div>
+      <button id="btn-save-score" class="big primary">💾 Spara poäng</button>
+    </div>
+  </div>
+
+  <!-- high scores -->
+  <div id="highscores" class="overlay screen hidden">
+    <div class="card">
+      <h2>🏆 Topplistan</h2>
+      <div id="highscore-list" class="scores"></div>
+      <button id="btn-again" class="big primary">🔁 Spela igen</button>
+      <button id="btn-quit2" class="big">✖ Avsluta</button>
+    </div>
+  </div>
+
+  <!-- goodbye -->
+  <div id="goodbye" class="overlay screen hidden">
+    <div class="card">
+      <h2>Hej då! 🦄💕</h2>
+      <p class="big-text">Du kan stänga fönstret nu.</p>
+    </div>
+  </div>
+
+  <div id="loading" class="overlay screen"><div class="card"><h2>Laddar… 🌈</h2></div></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

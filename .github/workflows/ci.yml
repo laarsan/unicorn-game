@@ -32,6 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Node unit tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --check server.js && node --test tests/
+
       - name: Run Pester tests
         shell: pwsh
         run: |
