@@ -16,7 +16,7 @@ Windows-brandväggen kan fråga om Node får ta emot anslutningar – svara ja f
 
 ## Spela
 
-1. Starta spelet på PC:n som vanligt (`start.cmd`), eller `node server.js --no-browser`.
+1. Starta spelet på PC:n som vanligt (`Starta-spelet.cmd`), eller `node server.js --no-browser`.
 2. Sätt på Quest 3 (samma wifi som PC:n), öppna webbläsaren och gå till adressen ovan.
 3. Godkänn certifikatvarningen (Avancerat → Fortsätt).
 4. Tryck på **🥽 VR** i menyn. Knappen syns bara när webbläsaren stöder immersive VR.

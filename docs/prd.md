@@ -8,7 +8,7 @@ En 7-åring utan datorvana ska lockas in i PC-världen. Befintliga spel är anti
 
 ## Lösning
 
-En lane-runner i webbläsaren med en animerad enhörning, fem avslutade banor, egenproducerad grafik och syntetiserat ljud, startad via `start.cmd`. Styrning som successivt introducerar A/D, pilar, W/↑/mellanslag, S/↓ och musklick.
+En lane-runner i webbläsaren med en animerad enhörning, fem avslutade banor, egenproducerad grafik och syntetiserat ljud, startad via `Starta-spelet.cmd`. Styrning som successivt introducerar A/D, pilar, W/↑/mellanslag, S/↓ och musklick.
 
 ## Teknikval (ADR-lite)
 
@@ -18,12 +18,12 @@ En lane-runner i webbläsaren med en animerad enhörning, fem avslutade banor, e
 | Ljud | Web Audio API, syntes | "Skapa allt ljud" utan filer; deterministiskt, litet. |
 | Server | Node 24 `http`/`https`, inga npm-beroenden | Statiska filer + `/api/scores` + `/api/quit`; HTTPS-läge för Quest. |
 | Persistens | `data/scores.json` + localStorage-fallback | Överlever webbläsardata-rensning; delas mellan PC och Quest. |
-| Start | `start.cmd` → node + Edge `--app` helskärm | Edge finns på alla Windows 11. Känns som ett riktigt program. |
+| Start | `Starta-spelet.cmd` → node + Edge `--app` helskärm | Edge finns på alla Windows 11. Känns som ett riktigt program. |
 | Test | Playwright-cli screenshots + `node:test` för server | Visuell verifiering av grafik utan människa. |
 
 ## Leverabler
 
-- `start.cmd`, `server.js`, `public/` (index.html, css, js-moduler), `data/scores.json`
+- `Starta-spelet.cmd`, `server.js`, `public/` (index.html, css, js-moduler), `data/scores.json`
 - Fem banor definierade som data (`public/js/levels.js`)
 - README med start-, styrnings- och VR-instruktioner
 

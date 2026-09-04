@@ -76,7 +76,7 @@ Styrningstips visas i spelet på svenska med stora ikoner (t.ex. "Tryck ↑ elle
 
 ## Start och avslut
 
-- `start.cmd` i repo-roten: startar `node server.js` och öppnar Edge i app-läge i helskärm mot `http://localhost:8765`.
+- `Starta-spelet.cmd` i repo-roten: startar `node server.js` och öppnar Edge i app-läge i helskärm mot `http://localhost:8765`.
 - **Avsluta**-knappen: anropar `POST /api/quit` → servern stängs → fönstret stängs (`window.close()` + tydlig text "Du kan stänga fönstret nu" som fallback).
 - Ingen installation utöver Node (finns).
 
@@ -93,7 +93,7 @@ Styrningstips visas i spelet på svenska med stora ikoner (t.ex. "Tryck ↑ elle
 
 ## Acceptanskriterier (MVP)
 
-1. `start.cmd` startar spelet i ett fönster utan ytterligare steg.
+1. `Starta-spelet.cmd` startar spelet i ett fönster utan ytterligare steg.
 2. Fem banor kan spelas igenom i följd med tangentbord + mus.
 3. Enhörningen är animerad (galopp, hopp, ducka).
 4. Varje klarad bana ger konfetti + fanfar + jubel.

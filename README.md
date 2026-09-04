@@ -7,7 +7,7 @@ All grafik och allt ljud genereras av koden – inga nedladdade tillgångar.
 ## Starta spelet
 
 1. Se till att [Node.js](https://nodejs.org) (version 18 eller nyare) är installerat.
-2. Dubbelklicka på **`start.cmd`**.
+2. Dubbelklicka på **`Starta-spelet.cmd`**.
 
 Spelet öppnas i ett eget helskärmsfönster (Edge eller Chrome i app-läge).
 Knappen **Avsluta** i spelet stänger både fönstret och servern.
