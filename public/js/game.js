@@ -14,6 +14,7 @@ import { createEntity, animateEntity } from './entities.js';
 import { Effects } from './effects.js';
 import { FinishGate, WebSwingers } from './friends.js';
 import { loadScores, saveScore, loadProgress, saveProgress, loadSettings, saveSettings, requestQuit } from './scores.js';
+import { VRSupport } from './vr.js';
 
 const CAMERA_POS = new THREE.Vector3(0, 4.3, 8.6);
 const CAMERA_LOOK = new THREE.Vector3(0, 1.6, -7);
@@ -28,6 +29,7 @@ const PICKUP_DY = 1.35;
 const HIT_DX = 1.3;
 const SLAM_VELOCITY = -22;           // pressing duck in the air drops the unicorn fast
 const ARCH_TAIL_TOLERANCE = 0.25;    // arch z beyond which standing up again is safe
+const JUMP_CLEAR_TOLERANCE = 0.35;   // feet may be this far below an obstacle's top and still clear it
 
 export class Game {
   constructor({ canvas, ui, audio, input }) {
@@ -55,6 +57,7 @@ export class Game {
     this.level = null;
     this.bindInput();
     this.bindButtons();
+    this.vr = new VRSupport(this);
     window.addEventListener('resize', () => this.resize());
     this.audio.setMuted(this.settings.muted);
     this.ui.setMuted(this.settings.muted);
@@ -94,6 +97,7 @@ export class Game {
     this.ui.playerName = this.progress.name || '';
     this.world.setTheme(LEVELS[0].theme);
     this.showMenu();
+    this.vr.init();
     this.renderer.setAnimationLoop((time) => this.frame(time));
   }
 
@@ -295,6 +299,7 @@ export class Game {
     this.lastTime = time;
     dt *= this.debug.timeScale;
     this.input.pollGamepad();
+    this.vr.update();
     if (this.state === 'paused') { this.render(); return; }
     this.t += dt;
 
@@ -324,11 +329,15 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
+  desktopCameraTarget() {
+    return CAMERA_POS.clone();
+  }
+
   updateCamera(dt) {
     const P = this.player;
-    const target = CAMERA_POS.clone();
+    const target = this.vr.active ? this.vr.rigTarget.clone() : CAMERA_POS.clone();
     target.x += P.x * 0.35;
-    target.y += P.y * 0.25;
+    if (!this.vr.active) target.y += P.y * 0.25;
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt * 3);
       target.x += (Math.random() - 0.5) * this.shake * 0.6;
@@ -415,13 +424,15 @@ export class Game {
         const spec = OBJECT[e.type];
         // Arches only matter while they are over the unicorn's head/neck (front
         // half): releasing the duck key once the arch is behind the ears is fine.
-        const inZone = e.type === 'arch'
-          ? z > -(spec.halfDepth + UNICORN_HALF_DEPTH * 0.7) && z < ARCH_TAIL_TOLERANCE
-          : Math.abs(z) < spec.halfDepth + UNICORN_HALF_DEPTH * 0.7;
-        if (inZone && dx < HIT_DX) {
+        // Hit windows are generous towards the player: an obstacle only counts
+        // while it is in front of / under the unicorn's chest, never once it has
+        // passed behind the shoulders (so landing just behind a rock is safe).
+        const front = -(spec.halfDepth + UNICORN_HALF_DEPTH * 0.7);
+        const back = e.type === 'arch' ? ARCH_TAIL_TOLERANCE : spec.halfDepth * 0.5;
+        if (z > front && z < back && dx < HIT_DX) {
           let hit;
           if (e.type === 'arch') hit = P.y + this.unicorn.height > spec.clearance;
-          else hit = P.y < spec.height - 0.15;
+          else hit = P.y < spec.height - JUMP_CLEAR_TOLERANCE;
           if (hit && !hurt) this.hurt(e);
         }
       } else if (Math.abs(z) < PICKUP_DZ && dx < PICKUP_DX && Math.abs(e.y - bodyY) < PICKUP_DY + (e.isBubble ? 0.4 : 0)) {

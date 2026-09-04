@@ -74,7 +74,12 @@ export function sanitizeScore(input) {
   if (!Number.isFinite(score) || score < 0) return null;
   const name = String(input.name ?? '').trim().slice(0, MAX_NAME_LENGTH) || 'Enhörningsvän';
   const levels = Math.max(0, Math.min(99, Math.floor(Number(input.levels ?? 0)) || 0));
-  return { name, score, levels, date: new Date().toISOString().slice(0, 10) };
+  return { name, score, levels, date: localDate() };
+}
+
+function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function mergeScores(existing, entry) {

@@ -40,7 +40,9 @@ export async function loadScores() {
 
 export async function saveScore(entry) {
   const local = readLocal(STORAGE_KEYS.scores, []);
-  const merged = [...local, { ...entry, date: new Date().toISOString().slice(0, 10) }]
+  const d = new Date();
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const merged = [...local, { ...entry, date }]
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_SCORES);
   writeLocal(STORAGE_KEYS.scores, merged);

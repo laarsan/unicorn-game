@@ -107,15 +107,16 @@ export class UI {
 
   renderScores(target, scores, highlight) {
     const el = this.el[target];
+    const heading = target === 'menu-scores' ? '<h3>🏆 Topplistan</h3>' : '';
     if (!scores.length) {
-      el.innerHTML = '<h3>🏆 Topplistan</h3><p class="empty">Ingen har spelat än – bli först!</p>';
+      el.innerHTML = `${heading}<p class="empty">Ingen har spelat än – bli först!</p>`;
       return;
     }
     const rows = scores.map((s, i) => {
       const me = highlight && s.name === highlight.name && s.score === highlight.score && s.date === highlight.date;
       return `<li class="${me ? 'me' : ''}"><span class="rank">${i + 1}.</span><span class="name">${escapeHtml(s.name)}</span><span class="points">${s.score} ⭐</span></li>`;
     });
-    el.innerHTML = `<h3>🏆 Topplistan</h3><ol>${rows.join('')}</ol>`;
+    el.innerHTML = `${heading}<ol>${rows.join('')}</ol>`;
   }
 
   showLevelClear({ level, stars, levelScore, totalScore, isLast }) {
