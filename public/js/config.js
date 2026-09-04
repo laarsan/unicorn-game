@@ -32,7 +32,7 @@ export const OBJECT = {
   star:    { y: 1.0, radius: 0.55 },
   airStar: { y: 2.9, radius: 0.55 },
   crystal: { y: 3.0, radius: 0.6 },
-  bubble:  { radius: 0.75 },
+  bubble:  { radius: 0.95 },
   rock:    { height: 1.0, halfDepth: 0.6 },
   fence:   { height: 1.35, halfDepth: 0.25 },
   arch:    { clearance: 1.45, halfDepth: 0.35 },

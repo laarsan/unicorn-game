@@ -30,7 +30,7 @@ export const LEVELS = [
     gap: [6, 11],
     theme: {
       skyTop: 0x62b3ff, skyBottom: 0xe8f6ff, fog: 0xe4f1ff,
-      ground: 0xbfe0ff, decor: 'clouds', sun: 0xfff6c8, sunY: 45,
+      ground: null, decor: 'clouds', sun: 0xfff6c8, sunY: 45,
       musicKey: 2, musicTempo: 124, musicWave: 'triangle',
     },
     chunks: { starLine: 4, starZigzag: 3, rockJump: 3, fenceJump: 2, bubbleCluster: 5, crystalHop: 1, cloudWall: 1 },
@@ -177,9 +177,9 @@ export const CHUNKS = {
     const n = 2 + Math.floor(rng() * 2);
     const items = [];
     for (let i = 0; i < n; i++) {
-      items.push({ d: i * 3, lane: 0, type: 'bubble', x: (rng() - 0.5) * 9, y: 2.4 + rng() * 2.4 });
+      items.push({ d: i * 3.5, lane: 0, type: 'bubble', x: (rng() - 0.5) * 8, y: 2.0 + rng() * 2.0 });
     }
-    return { length: n * 3, items };
+    return { length: n * 3.5, items };
   },
 };
 

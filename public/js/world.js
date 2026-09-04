@@ -294,7 +294,8 @@ export class World {
     this.skyMat.uniforms.top.value.set(theme.skyTop);
     this.skyMat.uniforms.bottom.value.set(theme.skyBottom);
     this.scene.fog.color.set(theme.fog);
-    this.groundMat.color.set(theme.ground);
+    this.ground.visible = theme.ground !== null;
+    this.groundMat.color.set(theme.ground ?? theme.skyBottom);
     this.sunBody.material.color.set(theme.sun);
     this.sunGlow.material.color.set(theme.sun);
     this.sun.position.y = theme.sunY;
@@ -302,7 +303,7 @@ export class World {
     this.rainbow.visible = !theme.moon;
     this.hemi.intensity = theme.moon ? 0.7 : 1.1;
     this.dir.intensity = theme.moon ? 0.9 : 1.4;
-    this.hemi.groundColor.set(theme.ground).lerp(new THREE.Color(0xffffff), 0.6);
+    this.hemi.groundColor.set(theme.ground ?? theme.skyBottom).lerp(new THREE.Color(0xffffff), 0.6);
     for (const c of this.clouds) c.visible = theme.decor !== 'night';
     // rebuild decorations
     for (const d of this.decor) this.root.remove(d);

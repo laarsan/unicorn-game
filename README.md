@@ -53,7 +53,7 @@ publicering eller app-butik behövs.
 ## Utveckling
 
 ```
-node --test tests/      # enhetstester
+node --test             # enhetstester
 node server.js --no-browser
 ```
 

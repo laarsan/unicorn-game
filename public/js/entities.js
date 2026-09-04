@@ -26,7 +26,8 @@ const crystalGeo = new THREE.OctahedronGeometry(0.6, 0);
 const crystalMat = new THREE.MeshStandardMaterial({ color: 0xb9f2ff, emissive: 0x7fd8ff, emissiveIntensity: 0.6, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.9 });
 
 const bubbleGeo = new THREE.SphereGeometry(OBJECT.bubble.radius, 20, 16);
-const bubbleMat = new THREE.MeshPhysicalMaterial({ color: 0xcfe9ff, transparent: true, opacity: 0.45, roughness: 0.05, metalness: 0, clearcoat: 1, iridescence: 0.8, side: THREE.DoubleSide });
+const bubbleMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe6ff, emissive: 0x7fc8ff, emissiveIntensity: 0.35, transparent: true, opacity: 0.6, roughness: 0.05, metalness: 0, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, side: THREE.DoubleSide });
+const bubbleRimMat = new THREE.MeshBasicMaterial({ color: 0xff9fe0, transparent: true, opacity: 0.9 });
 const bubbleShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 
 const rockGeo = new THREE.DodecahedronGeometry(0.75, 0);
@@ -74,9 +75,12 @@ const builders = {
   bubble() {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(bubbleGeo, bubbleMat));
+    // pink rim ring facing the camera makes the bubble pop out against the sky
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(OBJECT.bubble.radius, 0.05, 8, 40), bubbleRimMat);
+    g.add(rim);
     const shine = new THREE.Mesh(sphereGeo, bubbleShineMat);
-    shine.scale.set(0.16, 0.1, 0.1);
-    shine.position.set(-0.3, 0.38, 0.45);
+    shine.scale.set(0.22, 0.13, 0.1);
+    shine.position.set(-0.35, 0.45, OBJECT.bubble.radius * 0.6);
     g.add(shine);
     g.userData.float = true;
     return g;
