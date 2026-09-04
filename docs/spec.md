@@ -100,3 +100,17 @@ Styrningstips visas i spelet på svenska med stora ikoner (t.ex. "Tryck ↑ elle
 5. High score registreras med namn och finns kvar efter omstart av spelet.
 6. **Spela igen** startar om från bana 1; **Avsluta** stänger spelet.
 7. Alla ljud och all grafik är genererade av koden i repot.
+
+## Status 2026-09-05 — MVP uppnått
+
+| Kriterium | Status | Verifiering |
+|---|---|---|
+| 1. `Starta-spelet.cmd` startar spelet | klart | Edge-fönster öppnas, `logs/server_log.txt` |
+| 2. Fem banor i följd med tangentbord + mus | klart | Playwright: riktiga tangenttryck, musklick på bubbla, bot-genomspelning utan träffar |
+| 3. Animerad enhörning | klart | skärmdumpar galopp/hopp/ducka |
+| 4. Konfetti + fanfar + jubel vid klarad bana | klart | skärmdump vid mål, fanfar i `audio.js` |
+| 5. High score med namn, kvar efter omstart | klart | `data/scores.json` via servern, localStorage-fallback |
+| 6. Spela igen / Avsluta | klart | knapparna testade; Avsluta stänger server + fönster |
+| 7. All grafik och allt ljud genereras i kod | klart | inga tillgångsfiler i repot utöver Three.js |
+
+Öppet: VR-läget (issue #10) är implementerat men inte provkört på en riktig Quest 3.
