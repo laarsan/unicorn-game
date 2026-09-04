@@ -56,7 +56,13 @@ Styrningstips visas i spelet på svenska med stora ikoner (t.ex. "Tryck ↑ elle
 2. **Molnriket** — bubblor introduceras (musklick). Fler hopphinder.
 3. **Godislandet** — ducka introduceras (regnbågsbågar). Snabbare.
 4. **Stjärnnatten** — kristaller i luften, mörkare himmel med lysande stjärnor, blandade hinder.
-5. **Spindelstaden** — snabbast, alla element, spindelvännerna svingar sig i bakgrunden och hejar vid mål.
+5. **Spindelstaden** — sura moln (filbyte), alla element, spindelvännerna svingar sig i bakgrunden och hejar vid mål.
+
+**Utökning efter provspelning 1 (2026-09-05):** 25 banor. Bana 1–15 håller bana 1:s tempo
+(hastighet 9) medan mekanikerna introduceras och världarna varierar; bana 16–24 ökar
+gradvis (+0,55/bana); bana 25 har den gamla bana 5:s hastighet (14,5). Bubblor är 2× på
+bana 1–15 och krymper linjärt till 1,25× på bana 25. Hjärtan på banan ger extra liv (max 7).
+Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkortet.
 
 ## Grafik
 
@@ -114,3 +120,15 @@ Styrningstips visas i spelet på svenska med stora ikoner (t.ex. "Tryck ↑ elle
 | 7. All grafik och allt ljud genereras i kod | klart | inga tillgångsfiler i repot utöver Three.js |
 
 Öppet: VR-läget (issue #10) är implementerat men inte provkört på en riktig Quest 3.
+
+## Provspelning 1 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| Kunde inte skriva W/A/S/D i namnfältet | Tangenter går till textfältet när det har fokus | Playwright: riktiga tryck ger "Wilma Sasa dW" |
+| Enhörningen "vibrerade" innan styrning | Gallopfasen ackumuleras per bildruta i stället för t × frekvens (hoppade vid hastighetsrampen) | kodgranskning, bot-körning |
+| Svårigheten stegrades för snabbt | 25 banor, lugnt tempo t.o.m. bana 15, ramp 16–24, bana 25 = gamla bana 5 | `tests/levels.test.mjs` |
+| Mer "WOW!" vid mål | WOW-text, fyrverkerier, dansande enhörning, 3,4 s innan kortet | skärmdumpar bana 3 och 4 |
+| Större bubblor | 2× bana 1–15 → 1,25× bana 25 | test + skärmdump bana 15 |
+| Extraliv | Hjärta på banan från bana 2, minst ett per bana, max 7 liv | bot fångade hjärtan (6–7 liv) |
+| Rensa historik | `data/scores.json` = `[]`, nytt localStorage-namnrymd (v2) rensar gammal progress | menyn visar "Ingen har spelat än" |

@@ -1,7 +1,8 @@
 # Regnbågsgaloppen 🦄🌈
 
-Ett enhörningsspel för barn som ska lära sig tangentbord och mus. Fem banor,
-en animerad enhörning, regnbågar, glitter och spindelvänner som hejar vid mål.
+Ett enhörningsspel för barn som ska lära sig tangentbord och mus. 25 banor,
+en animerad enhörning, regnbågar, glitter, fyrverkerier och spindelvänner som
+hejar vid mål.
 All grafik och allt ljud genereras av koden – inga nedladdade tillgångar.
 
 ## Starta spelet
@@ -26,6 +27,7 @@ node server.js --no-browser
 | Hoppa | `W`, `↑` eller `Mellanslag` | |
 | Ducka | `S` eller `↓` (håll inne) | |
 | Poppa bubbla | | Vänsterklick på bubblan |
+| Extra liv | Spring på hjärtat 💖 | |
 | Starta / Nästa bana | `Enter` | Klick på knappen |
 | Paus | `Esc` | Klick på ⏸ |
 | Ljud av/på | `M` | Klick på 🔊 |
@@ -34,15 +36,27 @@ Handkontroll (Xbox-typ) fungerar också: vänster spak/styrkors, `A` hoppa, `B` 
 
 ## Banor
 
+25 banor i fem världar (äng, moln, godis, natt, stad) som återkommer med nya
+färger och namn. De fem första lär ut en sak i taget:
+
 1. **Regnbågsängen** – lär hopp och filbyte.
-2. **Molnriket** – bubblor som poppas med musen.
+2. **Molnriket** – bubblor som poppas med musen, och det första hjärtat.
 3. **Godislandet** – ducka under regnbågsbågar.
 4. **Stjärnnatten** – kristaller högt i luften.
-5. **Spindelstaden** – allt på en gång, spindelvännerna svingar sig i bakgrunden.
+5. **Spindelstaden** – sura moln som kräver filbyte, spindelvännerna svingar sig i bakgrunden.
 
-Fem hjärtan per bana. Tar hjärtana slut börjar banan om, men poängen från
-tidigare banor behålls. Efter bana 5 sparas poängen på topplistan
-(`data/scores.json`), som finns kvar mellan spelomgångar.
+Svårighetskurva: bana 1–15 håller samma lugna tempo, bana 16–24 blir lite
+snabbare för varje bana och bana 25 (**Enhörningsslottet**) går fortast.
+Bubblorna är dubbelt så stora på bana 1–15 och krymper sedan till 125 % på
+bana 25. Kurvan ligger i `public/js/levels.js`.
+
+Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
+Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
+Vid mål dansar enhörningen medan fyrverkerierna går. Efter bana 25 sparas
+poängen på topplistan (`data/scores.json`), som finns kvar mellan spelomgångar.
+
+Vill du börja om helt (tom topplista, ingen "Fortsätt"-knapp): töm
+`data/scores.json` till `[]` och ta bort `temp/browser-profile`.
 
 ## VR (Meta Quest 3)
 
