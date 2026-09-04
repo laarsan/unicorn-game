@@ -25,9 +25,11 @@ export class Input {
   bind() {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      // While a text field (the name box) has focus the keys are letters, not
+      // controls: a child must be able to type "Wilma" or "Sasa" in her name.
+      if (isTyping(e.target) && e.code !== 'Escape') return;
       const action = keyToAction(e.code);
       if (['left', 'right', 'jump', 'duck'].includes(action)) e.preventDefault();
-      if (action === 'confirm' && e.target && e.target.tagName === 'INPUT') return; // let the name field handle Enter
       this.emit('any');
       if (action === 'duck') this.duckHeld = true;
       if (action) this.emit(action);
@@ -73,6 +75,10 @@ export class Input {
   get ducking() {
     return this.duckHeld || this.gamepadState.duck;
   }
+}
+
+function isTyping(target) {
+  return Boolean(target) && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
 }
 
 function keyToAction(code) {
