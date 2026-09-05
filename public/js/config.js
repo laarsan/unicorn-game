@@ -45,7 +45,8 @@ export const OBJECT = {
 // Storage namespace. Bumping the version gives every browser a fresh start
 // (progress, local top list); the old keys are removed on boot.
 export const STORAGE_KEYS = {
-  progress: 'regnbagsgaloppen.v2.progress',
+  progress: 'regnbagsgaloppen.v2.progress',   // pre-player-switch shape, migrated into `players` on boot
+  players: 'regnbagsgaloppen.v2.players',
   scores: 'regnbagsgaloppen.v2.scores',
   settings: 'regnbagsgaloppen.v2.settings',
 };

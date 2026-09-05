@@ -12,7 +12,8 @@ export class UI {
     this.el = {};
     for (const id of [...SCREENS, 'hud', 'hud-hearts', 'hud-level', 'hud-score', 'hud-progress-fill', 'hud-progress-unicorn',
       'tip', 'tip-icon', 'tip-text', 'countdown', 'wow', 'popups', 'name', 'finished-name', 'finished-score', 'menu-scores',
-      'highscore-list', 'levelclear-title', 'levelclear-stars', 'levelclear-text', 'btn-continue', 'continue-level', 'btn-mute', 'btn-vr']) {
+      'highscore-list', 'levelclear-title', 'levelclear-stars', 'levelclear-text', 'btn-continue', 'continue-level', 'btn-mute', 'btn-vr',
+      'players', 'btn-new-player']) {
       this.el[id] = $(id);
     }
     this.tipTimer = null;
@@ -160,6 +161,37 @@ export class UI {
     } else {
       btn.classList.add('hidden');
     }
+  }
+
+  onNameInput(fn) {
+    this.el.name.addEventListener('input', () => fn(this.playerName));
+  }
+
+  // Chips for every name that has played on this computer; clicking one
+  // fills the name box. `onPick(name)` is called with the chosen name.
+  renderPlayers(players, onPick) {
+    const el = this.el.players;
+    el.classList.toggle('hidden', players.length === 0);
+    el.innerHTML = players.map((p) =>
+      `<button type="button" class="chip ${p.current ? 'current' : ''}" data-name="${escapeHtml(p.name)}">👤 ${escapeHtml(p.name)}${p.level > 1 ? ` · bana ${p.level}` : ''}</button>`).join('');
+    for (const chip of el.querySelectorAll('.chip')) {
+      chip.addEventListener('click', (e) => { e.preventDefault(); onPick(chip.dataset.name); });
+    }
+  }
+
+  markCurrentPlayer(name) {
+    const key = name.trim().toLocaleLowerCase('sv');
+    for (const chip of this.el.players.querySelectorAll('.chip')) {
+      chip.classList.toggle('current', chip.dataset.name.toLocaleLowerCase('sv') === key);
+    }
+  }
+
+  // Clear the name box for the next child and put the caret in it.
+  newPlayer() {
+    this.el.name.value = '';
+    this.setContinue(1);
+    this.markCurrentPlayer('');
+    this.el.name.focus();
   }
 
   setMuted(muted) {

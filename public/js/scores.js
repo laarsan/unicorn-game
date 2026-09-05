@@ -73,14 +73,60 @@ export async function saveScore(entry) {
   return merged;
 }
 
-// Progress: which level the player reached and the running score, so a child
-// can stop after two levels and continue tomorrow.
-export function loadProgress() {
-  return readLocal(STORAGE_KEYS.progress, { level: 1, score: 0, name: '', bestLevel: 0 });
+// Progress is kept per player name so siblings can share the computer: Zelda
+// stops after three levels, Lars plays two, and when Zelda types her name again
+// she continues on level 4. Names are matched case-insensitively ("zelda" ==
+// "Zelda"); the most recent spelling is what the menu shows.
+export const DEFAULT_PLAYER_NAME = 'Enhörningsvän';
+
+export function normaliseName(name) {
+  return String(name || '').trim().toLocaleLowerCase('sv');
 }
 
-export function saveProgress(progress) {
-  writeLocal(STORAGE_KEYS.progress, progress);
+export function newPlayer(name) {
+  return { name: String(name || '').trim() || DEFAULT_PLAYER_NAME, level: 1, score: 0, bestLevel: 0 };
+}
+
+// Pure store operations (also unit-tested): the store is { current, players }.
+export function getPlayer(store, name) {
+  const key = normaliseName(name);
+  const existing = key ? store.players[key] : null;
+  return existing ? { ...existing, name: String(name).trim() || existing.name } : newPlayer(name);
+}
+
+export function setPlayer(store, record) {
+  const key = normaliseName(record.name);
+  if (!key) return store;
+  store.players[key] = { ...record };
+  store.current = key;
+  return store;
+}
+
+export function listPlayers(store) {
+  const current = store.current;
+  return Object.entries(store.players)
+    .map(([key, p]) => ({ key, ...p, current: key === current }))
+    .sort((a, b) => (a.current ? -1 : b.current ? 1 : a.name.localeCompare(b.name, 'sv')));
+}
+
+// Convert the single-player progress record of earlier builds into the store.
+export function migrateProgress(legacy) {
+  const store = { current: '', players: {} };
+  if (legacy && legacy.name) setPlayer(store, { ...newPlayer(legacy.name), level: legacy.level || 1, score: legacy.score || 0, bestLevel: legacy.bestLevel || 0 });
+  return store;
+}
+
+export function loadPlayers() {
+  const stored = readLocal(STORAGE_KEYS.players, null);
+  if (stored && stored.players) return { current: stored.current || '', players: stored.players };
+  const store = migrateProgress(readLocal(STORAGE_KEYS.progress, null));
+  writeLocal(STORAGE_KEYS.players, store);
+  try { localStorage.removeItem(STORAGE_KEYS.progress); } catch (err) { console.warn('localStorage cleanup failed', err); }
+  return store;
+}
+
+export function savePlayers(store) {
+  writeLocal(STORAGE_KEYS.players, store);
 }
 
 export function loadSettings() {

@@ -132,3 +132,17 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 | Större bubblor | 2× bana 1–15 → 1,25× bana 25 | test + skärmdump bana 15 |
 | Extraliv | Hjärta på banan från bana 2, minst ett per bana, max 7 liv | bot fångade hjärtan (6–7 liv) |
 | Rensa historik | `data/scores.json` = `[]`, nytt localStorage-namnrymd (v2) rensar gammal progress | menyn visar "Ingen har spelat än" |
+
+## Provspelning 2 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| Titeln inte centrerad | Titeln är en flex-rad (centreras även när ordet är bredare än kortet) och kortets sidopadding är begränsad till 56 px | mätning: titel- och kortcentrum sammanfaller vid 1366–2560 px bredd |
+| Vägens vita prickar rörde sig bortåt | Texturoffset skrollar åt andra hållet (planets +v pekar bort från kameran) | kodgranskning, skärmdumpar |
+| Muspekare | Gyllene, regnbågsrandigt enhörningshorn med glitter, 96 px (3× vanlig pekare), spets = klickpunkt; glittersläp följer pekaren | `cursor.js`, renderad SVG i skärmdump |
+| Bubbelljudet för tamt | Pop + "boing" + harpstigning i pentatonisk skala + glitter; varje bubbla i rad börjar ett steg högre | offline-rendering: 0,53 s, topp 0,21 |
+| Mer publik vid målet | 16 figurer till i två rader per sida, några med ballonger, hoppar och vinkar | skärmdump bana 5 |
+| Publikvrål i mål | `crowdRoar`: svällande brus i tre band + kör av "heeey" (flick- och pojkröster) + visslingar + applåder, 3,3 s | offline-rendering |
+| Ny spelare, progress per namn | Knapp **Ny spelare**, spelar-chips, progress lagras per namn (skiftlägesokänsligt) i `regnbagsgaloppen.v2.players`; gammal progress migreras | `tests/players.test.mjs` + Playwright: Zelda 3 banor, Lars 2, "zelda" → Fortsätt på bana 4 |
+| Ljud när spindelvännerna hänger | "Heey!" från vartannat gungtag när vännen är i bild; röst 1 (vit dräkt) = flicka (340 Hz), 0 och 2 = pojkar (205/150 Hz), stereopanorerat efter läge, 1,2 s spärrtid | bot bana 5: 10 rop utan träffar |
+

@@ -52,10 +52,18 @@ bana 25. Kurvan ligger i `public/js/levels.js`.
 
 Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
-Vid mål dansar enhörningen medan fyrverkerierna går. Efter bana 25 sparas
-poängen på topplistan (`data/scores.json`), som finns kvar mellan spelomgångar.
+Vid mål dansar enhörningen medan fyrverkerierna går och publiken vrålar. Efter
+bana 25 sparas poängen på topplistan (`data/scores.json`), som finns kvar
+mellan spelomgångar.
 
-Vill du börja om helt (tom topplista, ingen "Fortsätt"-knapp): töm
+## Flera spelare
+
+Varje namn har sin egen sparade bana. Skriv ditt namn (stor eller liten
+bokstav spelar ingen roll) så visas **Fortsätt på bana N** om du spelat förut.
+**Ny spelare** tömmer namnrutan för nästa barn, och chipsen under rutan byter
+tillbaka med ett klick. `Enter` i namnrutan fortsätter där du var.
+
+Vill du börja om helt (tom topplista, inga sparade spelare): töm
 `data/scores.json` till `[]` och ta bort `temp/browser-profile`.
 
 ## VR (Meta Quest 3)
@@ -80,12 +88,13 @@ Koden ligger i `public/js/`:
 | `unicorn.js` | Enhörningen (modell + animation) |
 | `world.js` | Himmel, väg, moln, dekorationer per tema |
 | `entities.js` | Stjärnor, kristaller, bubblor, hinder |
-| `friends.js` | Målport och spindelvännerna |
+| `friends.js` | Målport, publiken och spindelvännerna |
 | `effects.js` | Glitter, konfetti |
 | `audio.js` | Ljudsyntes och musiksekvenser |
 | `ui.js` | Menyer och HUD (DOM) |
 | `input.js` | Tangentbord, mus, handkontroll |
-| `scores.js` | Topplista och sparad progress |
+| `scores.js` | Topplista och sparad progress per spelare |
+| `cursor.js` | Enhörningshornet som muspekare + glittersläp |
 
 Test-hook: `window.__game.debug.autoplay = true` låter en enkel bot spela banan.
 

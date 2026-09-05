@@ -13,7 +13,10 @@ import { Unicorn } from './unicorn.js';
 import { createEntity, animateEntity } from './entities.js';
 import { Effects } from './effects.js';
 import { FinishGate, WebSwingers } from './friends.js';
-import { loadScores, saveScore, loadProgress, saveProgress, loadSettings, saveSettings, requestQuit, forgetLegacyStorage } from './scores.js';
+import {
+  loadScores, saveScore, loadPlayers, savePlayers, getPlayer, setPlayer, listPlayers, DEFAULT_PLAYER_NAME,
+  loadSettings, saveSettings, requestQuit, forgetLegacyStorage,
+} from './scores.js';
 import { VRSupport } from './vr.js';
 
 const CAMERA_POS = new THREE.Vector3(0, 4.3, 8.6);
@@ -32,6 +35,7 @@ const HIT_DX = 1.3;
 const SLAM_VELOCITY = -22;           // pressing duck in the air drops the unicorn fast
 const ARCH_TAIL_TOLERANCE = 0.25;    // arch z beyond which standing up again is safe
 const JUMP_CLEAR_TOLERANCE = 0.35;   // feet may be this far below an obstacle's top and still clear it
+const HEY_COOLDOWN_SECONDS = 1.2;   // the swinging friends never shout over each other
 const TIP_FOR_TYPE = { rock: 'jump', fence: 'jump', arch: 'duck', bubble: 'bubble', heart: 'heart', cloud: 'cloud' };
 
 export class Game {
@@ -43,7 +47,7 @@ export class Game {
     this.state = 'loading';
     this.t = 0;
     this.lastTime = 0;
-    this.debug = { autoplay: false, timeScale: 1, hits: [] };
+    this.debug = { autoplay: false, timeScale: 1, hits: [], heys: 0 };
     this.settings = loadSettings();
     this.scores = [];
     this.setupThree();
@@ -53,6 +57,8 @@ export class Game {
     this.effects = new Effects(this.scene);
     this.gate = new FinishGate(this.scene);
     this.swingers = new WebSwingers(this.scene);
+    this.swingers.onCall = (i, pan) => this.friendCalls(i, pan);
+    this.lastHeyAt = -Infinity;
     this.raycaster = new THREE.Raycaster();
     this.shake = 0;
     this.player = { lane: 0, x: 0, y: 0, vy: 0, airborne: false, ducking: false };
@@ -97,8 +103,11 @@ export class Game {
   async boot() {
     forgetLegacyStorage();
     this.scores = await loadScores();
-    this.progress = loadProgress();
-    this.ui.playerName = this.progress.name || '';
+    this.players = loadPlayers();
+    // `current` is the normalised key; show the spelling the child actually typed.
+    const last = this.players.players[this.players.current];
+    this.progress = last ? { ...last } : getPlayer(this.players, '');
+    this.ui.playerName = last ? last.name : '';
     this.world.setTheme(LEVELS[0].theme);
     this.showMenu();
     this.vr.init();
@@ -112,16 +121,37 @@ export class Game {
     this.world.setTheme(LEVELS[0].theme);
     this.speed = 0;
     this.ui.renderScores('menu-scores', this.scores.slice(0, 5));
-    this.ui.setContinue(this.progress.level > 1 && this.progress.level <= LEVELS.length ? this.progress.level : 1);
+    this.ui.renderPlayers(listPlayers(this.players), (name) => { this.ui.playerName = name; this.nameTyped(name); });
+    this.nameTyped(this.ui.playerName);
     this.ui.showHud(false);
     this.ui.showScreen('menu');
   }
 
+  // The "continue" button follows whatever name is in the box: typing "Zelda"
+  // again brings back Zelda's level, even after Lars has played in between.
+  nameTyped(name) {
+    const p = getPlayer(this.players, name);
+    this.ui.setContinue(p.level > 1 && p.level <= LEVELS.length ? p.level : 1);
+    this.ui.markCurrentPlayer(name);
+  }
+
+  saveProgress() {
+    setPlayer(this.players, this.progress);
+    savePlayers(this.players);
+  }
+
   startRun(levelIndex, totalScore) {
-    this.run = { levelIndex, totalScore, name: this.ui.playerName || this.progress.name || 'Enhörningsvän' };
-    this.progress.name = this.run.name;
-    saveProgress(this.progress);
+    const name = this.ui.playerName || DEFAULT_PLAYER_NAME;
+    this.progress = getPlayer(this.players, name);
+    this.run = { levelIndex, totalScore, name: this.progress.name };
+    this.saveProgress();
     this.startLevel(levelIndex);
+  }
+
+  continueRun() {
+    const p = getPlayer(this.players, this.ui.playerName || DEFAULT_PLAYER_NAME);
+    if (p.level > 1 && p.level <= LEVELS.length) this.startRun(p.level - 1, p.score || 0);
+    else this.startRun(0, 0);
   }
 
   startLevel(index) {
@@ -211,7 +241,9 @@ export class Game {
     const ui = this.ui;
     const click = (fn) => () => { this.audio.unlock(); this.audio.click(); fn(); };
     ui.onButton('btn-start', click(() => this.startRun(0, 0)));
-    ui.onButton('btn-continue', click(() => this.startRun(this.progress.level - 1, this.progress.score || 0)));
+    ui.onButton('btn-continue', click(() => this.continueRun()));
+    ui.onButton('btn-new-player', click(() => this.ui.newPlayer()));
+    ui.onNameInput((name) => this.nameTyped(name));
     ui.onButton('btn-quit', click(() => this.quit()));
     ui.onButton('btn-quit2', click(() => this.quit()));
     ui.onButton('btn-mute', click(() => this.toggleMute()));
@@ -224,12 +256,13 @@ export class Game {
     ui.onButton('btn-save-score', click(() => this.submitScore()));
     ui.onButton('btn-again', click(() => this.startRun(0, 0)));
     ui.el['finished-name'].addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.submitScore(); } });
-    ui.el.name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.audio.unlock(); this.startRun(0, 0); } });
+    // Enter in the name box continues a saved adventure if there is one, otherwise starts from level 1.
+    ui.el.name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.audio.unlock(); this.continueRun(); } });
   }
 
   confirm() {
     switch (this.state) {
-      case 'menu': this.startRun(0, 0); break;
+      case 'menu': this.continueRun(); break;
       case 'levelclear': this.nextLevel(); break;
       case 'retry': this.startLevel(this.run.levelIndex); break;
       case 'highscores': this.startRun(0, 0); break;
@@ -482,6 +515,15 @@ export class Game {
     if (L.hearts <= 0) this.beginRetry();
   }
 
+  // A spider friend swinging past in the background shouts "heey!".
+  friendCalls(index, pan) {
+    if (this.state !== 'playing') return;
+    if (this.t - this.lastHeyAt < HEY_COOLDOWN_SECONDS) return;
+    this.lastHeyAt = this.t;
+    this.debug.heys += 1;
+    this.audio.hey(index, pan);
+  }
+
   checkTips() {
     const L = this.level;
     const ahead = L.distance + TIP_LOOKAHEAD;
@@ -511,6 +553,7 @@ export class Game {
     this.gate.celebrating = true;
     this.audio.stopMusic();
     this.audio.fanfare();
+    this.audio.crowdRoar();
     this.effects.startConfetti(new THREE.Vector3(0, 2, -2), 3.5);
     this.effects.startFireworks(FIREWORKS_SECONDS, () => this.audio.firework());
     this.ui.hideTip();
@@ -537,7 +580,7 @@ export class Game {
       this.progress.level = isLast ? 1 : this.run.levelIndex + 2;
       this.progress.score = isLast ? 0 : this.run.totalScore;
       this.progress.bestLevel = Math.max(this.progress.bestLevel || 0, this.run.levelIndex + 1);
-      saveProgress(this.progress);
+      this.saveProgress();
       this.ui.showLevelClear({ level: L.def, stars, levelScore: L.score, totalScore: this.run.totalScore, isLast });
     }
   }
@@ -573,9 +616,7 @@ export class Game {
   async submitScore() {
     if (this.state !== 'finished') return;
     this.state = 'saving';
-    const name = this.ui.finishedName || this.run.name || 'Enhörningsvän';
-    this.progress.name = name;
-    saveProgress(this.progress);
+    const name = this.ui.finishedName || this.run.name || DEFAULT_PLAYER_NAME;
     const entry = { name, score: this.run.totalScore, levels: LEVELS.length };
     this.scores = await saveScore(entry);
     const highlight = this.scores.find((s) => s.name === name && s.score === entry.score);

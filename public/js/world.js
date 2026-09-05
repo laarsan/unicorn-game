@@ -327,7 +327,9 @@ export class World {
   }
 
   update(dt, speed, t) {
-    this.roadTex.offset.y -= (speed * dt) / 12;
+    // The plane's +v runs away from the camera, so the sparkles and lane dashes
+    // must scroll towards +v-offset to come *at* the player like everything else.
+    this.roadTex.offset.y += (speed * dt) / 12;
     for (const d of this.decor) {
       d.position.z += speed * dt;
       if (d.userData.spin) d.rotation.y += dt * d.userData.spin;

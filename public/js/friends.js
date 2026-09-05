@@ -3,6 +3,7 @@
 
 import * as THREE from '../vendor/three.module.js';
 import { PALETTE, ROAD_WIDTH } from './config.js';
+import { makeRng } from './levels.js';
 
 const sphereGeo = new THREE.SphereGeometry(1, 14, 12);
 const limbGeo = new THREE.CapsuleGeometry(0.09, 0.4, 4, 8);
@@ -14,6 +15,21 @@ const FRIENDS = [
   { suit: 0xf7f7fb, accent: 0xff5fb0, eye: 0xf7f7fb },   // white + pink
   { suit: 0x1f1f2b, accent: 0xe8302a, eye: 0xffffff },   // black + red
 ];
+// The rest of the audience: more hero suits in party colours, placed in two
+// rows on each side of the gate behind the three friends.
+const CROWD_SUITS = [
+  { suit: 0x9b7bff, accent: 0xffe066, eye: 0xffffff },
+  { suit: 0x7bed9f, accent: 0xff5d8f, eye: 0xffffff },
+  { suit: 0xffe066, accent: 0x70c1ff, eye: 0x2b2b3b },
+  { suit: 0x70c1ff, accent: 0xffffff, eye: 0xffffff },
+  { suit: 0xff8ad8, accent: 0x9b7bff, eye: 0xffffff },
+  { suit: 0xff9f43, accent: 0x1f1f2b, eye: 0xffffff },
+  { suit: 0x2c4fd6, accent: 0xe8302a, eye: 0xffffff },
+  { suit: 0xffffff, accent: 0x7bed9f, eye: 0xffffff },
+];
+const CROWD_PER_SIDE = 8;
+const balloonGeo = new THREE.SphereGeometry(0.32, 12, 10);
+const balloonStringMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
 
 export function makeFriend(spec) {
   const g = new THREE.Group();
@@ -112,12 +128,44 @@ export class FinishGate {
       this.friends.push(f);
       this.group.add(f);
     });
+    this.buildCrowd();
     // flags on strings
     for (let i = 0; i < 14; i++) {
       const flag = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 3), new THREE.MeshLambertMaterial({ color: PALETTE.rainbow[i % 7] }));
       flag.rotation.z = Math.PI;
       flag.position.set(-ROAD_WIDTH / 2 + (i / 13) * ROAD_WIDTH, 5.4 - Math.sin((i / 13) * Math.PI) * 0.6, -0.5);
       this.group.add(flag);
+    }
+  }
+
+  buildCrowd() {
+    this.crowd = [];
+    const rng = makeRng(2024);
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < CROWD_PER_SIDE; i++) {
+        const spec = CROWD_SUITS[(i + (side > 0 ? 3 : 0)) % CROWD_SUITS.length];
+        const f = makeFriend(spec);
+        const row = i % 2;                       // 0 = near the road, 1 = a step further out
+        const along = Math.floor(i / 2);         // spread along the road, in front of and beyond the gate
+        f.position.set(
+          side * (ROAD_WIDTH / 2 + 3.2 + row * 1.7 + rng() * 0.6),
+          0,
+          -3.5 + along * 2.1 + row * 1.0 + rng() * 0.5,
+        );
+        f.rotation.y = side > 0 ? -0.9 - rng() * 0.4 : 0.9 + rng() * 0.4;
+        f.scale.setScalar(0.85 + rng() * 0.25);
+        f.userData.phase = rng() * 6;
+        if (rng() < 0.45) {
+          const balloon = new THREE.Mesh(balloonGeo, new THREE.MeshLambertMaterial({ color: PALETTE.rainbow[Math.floor(rng() * 7)] }));
+          balloon.position.set(-side * 0.35, 2.6, 0);
+          f.add(balloon);
+          const string = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-side * 0.35, 2.3, 0), new THREE.Vector3(-side * 0.38, 1.0, 0.05)]), balloonStringMat);
+          f.add(string);
+          f.userData.balloon = balloon;
+        }
+        this.crowd.push(f);
+        this.group.add(f);
+      }
     }
   }
 
@@ -142,6 +190,14 @@ export class FinishGate {
       f.userData.limbs['arm-1'].rotation.z = this.celebrating ? 2.4 - wave : 0.6;
       f.rotation.y += Math.sin(t * 3 + i) * dt * 0.3;
     });
+    for (const f of this.crowd) {
+      const p = f.userData.phase + t * (this.celebrating ? 8 : 3);
+      f.position.y = this.celebrating ? Math.abs(Math.sin(p)) * 0.5 : Math.abs(Math.sin(p)) * 0.08;
+      const wave = Math.sin(p * 1.3) * 0.6;
+      f.userData.limbs['arm1'].rotation.z = this.celebrating ? -2.4 + wave : -1.2 + wave * 0.4;
+      f.userData.limbs['arm-1'].rotation.z = this.celebrating ? 2.4 - wave : 0.6;
+      if (f.userData.balloon) f.userData.balloon.position.x += Math.sin(t * 1.7 + p) * dt * 0.05;
+    }
     this.banner.rotation.z = Math.sin(t * 2) * 0.05;
   }
 }
@@ -164,19 +220,45 @@ export class WebSwingers {
       pivot.add(line);
       pivot.position.set((i - 1) * 16, 18, -60 - i * 45);
       pivot.userData.phase = i * 1.3;
+      pivot.userData.figure = f;
+      pivot.userData.swings = 0;
+      pivot.userData.lastSwing = null;
+      pivot.userData.waveUntil = 0;
       this.group.add(pivot);
       this.swingers.push(pivot);
     });
+    // Called with (index, pan) when a friend swings past its apex in view –
+    // the game plays the "heey!" and decides whether the moment is right.
+    this.onCall = null;
   }
 
   setVisible(v) { this.group.visible = v; }
 
   update(dt, speed, t) {
     if (!this.group.visible) return;
-    for (const p of this.swingers) {
-      p.rotation.z = Math.sin(t * 1.4 + p.userData.phase) * 0.7;
+    this.swingers.forEach((p, i) => {
+      const swing = Math.sin(t * SWING_RATE + p.userData.phase);
+      p.rotation.z = swing * 0.7;
       p.position.z += speed * dt * 0.5;
       if (p.position.z > 30) p.position.z -= 160;
-    }
+      // one call per two full swings, only while the friend is close enough to see
+      const last = p.userData.lastSwing;
+      if (last !== null && last < 0 && swing >= 0) {
+        p.userData.swings += 1;
+        const inView = p.position.z > CALL_NEAR_Z && p.position.z < CALL_FAR_Z;
+        if (inView && p.userData.swings % 2 === 0 && this.onCall) {
+          this.onCall(i, Math.max(-1, Math.min(1, p.position.x / 20)));
+          p.userData.waveUntil = t + 0.8;
+        }
+      }
+      p.userData.lastSwing = swing;
+      const f = p.userData.figure;
+      const waving = t < p.userData.waveUntil;
+      f.userData.limbs['arm1'].rotation.z = waving ? -2.4 + Math.sin(t * 14) * 0.5 : 0.6;
+    });
   }
 }
+
+const SWING_RATE = 1.4;      // radians / s of the pendulum phase
+const CALL_NEAR_Z = -110;    // swingers call out only while between these depths (camera at z ≈ 9)
+const CALL_FAR_Z = 12;

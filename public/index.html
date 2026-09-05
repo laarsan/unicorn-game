@@ -32,10 +32,14 @@
       <p class="subtitle">🦄 Ett enhörningsäventyr i 25 banor 🌈</p>
       <div class="name-row">
         <label for="name">Vad heter du?</label>
-        <input id="name" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Skriv ditt namn">
+        <div class="name-line">
+          <input id="name" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Skriv ditt namn">
+          <button id="btn-new-player" class="small" title="Byt till en ny spelare">👤 Ny spelare</button>
+        </div>
+        <div id="players" class="players hidden"></div>
       </div>
+      <button id="btn-continue" class="big primary hidden">⏩ Fortsätt på bana <span id="continue-level">1</span></button>
       <button id="btn-start" class="big primary">▶ Starta äventyret</button>
-      <button id="btn-continue" class="big hidden">⏩ Fortsätt på bana <span id="continue-level">1</span></button>
       <div class="controls-help">
         <div><kbd>A</kbd><kbd>D</kbd> eller <kbd>←</kbd><kbd>→</kbd> byt fil</div>
         <div><kbd>W</kbd><kbd>↑</kbd><kbd>MELLANSLAG</kbd> hoppa</div>

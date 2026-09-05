@@ -4,11 +4,13 @@ import { Game } from './game.js';
 import { UI } from './ui.js';
 import { AudioEngine } from './audio.js';
 import { Input } from './input.js';
+import { installCursor } from './cursor.js';
 
 const canvas = document.getElementById('game');
 const ui = new UI();
 const audio = new AudioEngine();
 const input = new Input(canvas);
+installCursor();
 
 let game;
 try {
