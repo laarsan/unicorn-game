@@ -22,14 +22,33 @@ export const SPEED_RAMP_SECONDS = 1.6;  // ease-in at level start
 
 // Star rating on the level-clear card: share of the level's stars collected.
 // Deliberately generous – a seven-year-old should see two or three stars on
-// most runs (play-test 6: 0.8 / 0.45 made three stars nearly unreachable).
-export const STAR_RATING = { three: 0.5, two: 0.2 };
+// most runs (play-test 6: 0.8 / 0.45 made three stars nearly unreachable,
+// play-test 7: 0.5 / 0.2 was still a little strict).
+export const STAR_RATING = { three: 0.35, two: 0.12 };
+
+// Flight mode ("Flyga i himlen"): the unicorn flies instead of galloping. W/S
+// (or ↑/↓) climb and descend, everything is a collectible and nothing hurts.
+export const FLIGHT = {
+  minY: 0.6,
+  maxY: 5.4,
+  startY: 2.2,
+  climbSpeed: 6.5,          // units / s up or down while the key is held
+  attract: { dx: 2.0, dy: 2.4, ahead: 5.5 },  // collectibles this close are pulled in – no need to touch them
+  pullSpeed: 28,            // units / s a pulled collectible flies towards the unicorn
+  catchDistance: 0.9,       // pulled this close = caught
+  laserEvery: 0.15,         // share of the course length between two rainbow laser shots
+  laserBeamSeconds: 0.75,   // how long the beam is drawn
+  laserRippleSeconds: 0.04, // the shot collects its targets one by one, nearest first, this far apart
+  laserReach: 2,            // z (behind the horn) a target may still be at when the beam fires
+};
+export const LASER_KEY = 'E';  // next to W and D, so a small hand reaches it without moving
 
 export const POINTS = {
   star: 10,
   bubble: 25,
   crystal: 50,
   heart: 100,
+  candy: 15,
   levelClear: 200,
   perHeart: 50,
 };
@@ -41,6 +60,7 @@ export const OBJECT = {
   crystal: { y: 3.0, radius: 0.6 },
   bubble:  { radius: 0.95 },        // base radius; levels scale it via level.bubbleScale
   heart:   { y: 1.1, radius: 0.5 },
+  candy:   { y: 2.0, radius: 0.45 },  // flight mode only; the course sets each piece's height
   rock:    { height: 1.0, halfDepth: 0.6 },
   fence:   { height: 1.35, halfDepth: 0.25 },
   arch:    { clearance: 1.45, halfDepth: 0.35 },

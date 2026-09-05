@@ -8,6 +8,9 @@ test('sanitizeScore trims, caps and defaults the name', () => {
   assert.equal(e.score, 123);
   assert.equal(e.levels, 5);
   assert.equal(sanitizeScore({ name: '', score: 10 }).name, 'Enhörningsvän');
+  assert.equal(sanitizeScore({ name: 'Lisa', score: 1 }).mode, 'run', 'a run is the default mode');
+  assert.equal(sanitizeScore({ name: 'Lisa', score: 1, mode: 'fly' }).mode, 'fly');
+  assert.equal(sanitizeScore({ name: 'Lisa', score: 1, mode: 'hack' }).mode, 'run', 'unknown modes fall back to run');
   assert.equal(sanitizeScore({ name: 'x'.repeat(50), score: 1 }).name.length, 20);
 });
 

@@ -52,11 +52,12 @@ html, body {
 }
 
 .screen.see-through { background: none; align-items: flex-end; padding-bottom: 4vh; }
-.screen.see-through .card { padding: 2vh 4vw; }
+.screen.see-through .card { padding: 2vh 4vw; margin: auto auto 0; }   /* stays at the bottom so the dance is seen */
 .screen.see-through h2 { margin-bottom: 0.1em; }
 .screen.see-through .big-text { margin: 0.2em 0 0.5em; }
 
 .card {
+  margin: auto;   /* safe centring: a card taller than the window scrolls instead of losing its top */
   background: var(--card);
   border: 6px solid #fff;
   border-radius: 40px;
@@ -267,6 +268,72 @@ kbd {
 }
 .players .chip.current { background: linear-gradient(180deg, #ffd23f, #ff9f43); color: #5a2d0c; }
 #btn-continue.primary { animation: none; background: linear-gradient(180deg, #b6ffd0, #7bed9f); color: #1d4d2a; }
+
+/* game mode picker (menu): gallop on the rainbow or fly in the sky */
+.mode-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.2em; margin: 0.2em 0 0.4em; }
+button.mode {
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  padding: 0.35em 1em;
+  margin: 0.15em;
+  background: linear-gradient(180deg, #fff, #e9e0ff);
+  box-shadow: 0 5px 0 rgba(155, 123, 255, 0.35);
+  opacity: 0.8;
+}
+button.mode.selected {
+  opacity: 1;
+  background: linear-gradient(180deg, #ffd23f, #ff9f43);
+  color: #5a2d0c;
+  border-color: #fff;
+  box-shadow: 0 5px 0 rgba(255, 159, 67, 0.6), 0 0 0 4px rgba(255, 210, 63, 0.45);
+  transform: scale(1.06);
+}
+
+/* flight mode: rainbow laser charge meter, bottom left, big and friendly */
+#hud-laser {
+  position: absolute;
+  left: 1.2vw;
+  bottom: 1.2vw;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  background: rgba(255, 255, 255, 0.88);
+  border: 4px solid #fff;
+  border-radius: 999px;
+  padding: 0.35em 0.9em 0.35em 0.6em;
+  box-shadow: 0 6px 18px rgba(74, 42, 90, 0.18);
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  pointer-events: none;
+}
+#hud-laser .laser-horn { font-size: 1.6em; transform: scaleX(-1); }
+#hud-laser .laser-body { display: flex; flex-direction: column; gap: 0.15em; min-width: min(34vw, 300px); }
+#hud-laser .laser-label { font-size: 0.8em; font-weight: bold; color: var(--lilac); white-space: nowrap; }
+#hud-laser .laser-meter {
+  position: relative;
+  height: 0.9em;
+  border-radius: 999px;
+  background: rgba(155, 123, 255, 0.18);
+  border: 3px solid #fff;
+  box-shadow: inset 0 2px 6px rgba(74, 42, 90, 0.18);
+  overflow: visible;
+}
+#hud-laser-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff5d8f, #ff9f43, #ffd23f, #7bed9f, #70c1ff, #9b7bff);
+  transition: width 0.15s linear;
+}
+#hud-laser .laser-sparkle { position: absolute; right: -0.3em; top: -0.8em; font-size: 1em; opacity: 0; transition: opacity 0.2s; }
+#hud-laser .laser-key { font-size: 1.2em; padding: 0.05em 0.6em; border-color: var(--pink); color: var(--pink); }
+#hud-laser.ready { animation: laser-ready 0.7s ease-in-out infinite alternate; border-color: var(--sun); }
+#hud-laser.ready .laser-label { color: var(--pink); }
+#hud-laser.ready .laser-sparkle { opacity: 1; animation: sparkle-spin 1s linear infinite; }
+#hud-laser.ready #hud-laser-fill { animation: rainbow-shift 1s linear infinite; background-size: 200% 100%; }
+#hud-laser.denied { animation: laser-shake 0.3s; }
+@keyframes laser-ready { from { transform: scale(1); box-shadow: 0 6px 18px rgba(74, 42, 90, 0.18); } to { transform: scale(1.06); box-shadow: 0 0 24px 6px rgba(255, 210, 63, 0.7); } }
+@keyframes sparkle-spin { from { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.4); } to { transform: rotate(360deg) scale(1); } }
+@keyframes rainbow-shift { to { background-position: 200% 0; } }
+@keyframes laser-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 
 /* glitter trail behind the horn cursor */
 #cursor-sparks { position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }

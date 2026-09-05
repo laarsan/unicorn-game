@@ -15,12 +15,44 @@ export class UI {
     for (const id of [...SCREENS, 'hud', 'hud-hearts', 'hud-level', 'hud-score', 'hud-progress-fill', 'hud-progress-unicorn',
       'tip', 'tip-icon', 'tip-text', 'countdown', 'wow', 'popups', 'name', 'finished-score', 'menu-scores',
       'highscore-list', 'levelclear-title', 'levelclear-stars', 'levelclear-text', 'btn-continue', 'continue-level', 'btn-mute', 'btn-vr',
-      'players', 'btn-new-player']) {
+      'players', 'btn-new-player', 'hud-laser', 'hud-laser-fill', 'hud-laser-label', 'btn-mode-run', 'btn-mode-fly']) {
       this.el[id] = $(id);
     }
     this.tipTimer = null;
     this.lastHearts = -1;
+    this.lastLaserReady = null;
     this.buttons = {};
+  }
+
+  // Menu: highlight the chosen game mode ('run' or 'fly').
+  setMode(mode) {
+    this.el['btn-mode-run'].classList.toggle('selected', mode !== 'fly');
+    this.el['btn-mode-fly'].classList.toggle('selected', mode === 'fly');
+  }
+
+  // Flight mode only: the rainbow laser meter lives in the HUD's bottom-left corner.
+  showLaser(visible) {
+    this.el['hud-laser'].classList.toggle('hidden', !visible);
+    this.lastLaserReady = null;
+  }
+
+  // charge 0..1; at 1 the meter glows and tells the child which key to press
+  setLaser(charge) {
+    const ready = charge >= 1;
+    this.el['hud-laser-fill'].style.width = Math.round(Math.max(0, Math.min(1, charge)) * 100) + '%';
+    if (ready !== this.lastLaserReady) {
+      this.lastLaserReady = ready;
+      this.el['hud-laser'].classList.toggle('ready', ready);
+      this.el['hud-laser-label'].textContent = ready ? '✨ REDO! Tryck E' : '🌈 Regnbågslaser laddar…';
+    }
+  }
+
+  // Fire pressed too early: wiggle the meter so the child sees it is still charging.
+  laserDenied() {
+    const el = this.el['hud-laser'];
+    el.classList.remove('denied');
+    void el.offsetWidth;
+    el.classList.add('denied');
   }
 
   onButton(id, fn) {
@@ -138,8 +170,9 @@ export class UI {
     const key = normaliseName(highlightName);
     const rows = scores.map((s, i) => {
       const me = key && normaliseName(s.name) === key;
+      const flew = s.mode === 'fly' ? '☁️ ' : '';
       return `<li class="${me ? 'me' : ''}"><span class="rank">${i + 1}.</span><span class="name">${escapeHtml(s.name)}</span>` +
-        `<span class="level">${describeLevels(s.levels)}</span><span class="points">${s.score} ⭐</span></li>`;
+        `<span class="level">${flew}${describeLevels(s.levels)}</span><span class="points">${s.score} ⭐</span></li>`;
     });
     el.innerHTML = `${heading}<ol>${rows.join('')}</ol>`;
   }
@@ -212,6 +245,7 @@ export class UI {
 }
 
 // "bana 7" for a run that cleared seven levels, a trophy once all are done.
+// (A run flown in flight mode gets a cloud in front – see renderScores.)
 function describeLevels(levels) {
   const n = Number(levels) || 0;
   if (n >= LEVEL_COUNT) return `🏆 alla ${LEVEL_COUNT}`;

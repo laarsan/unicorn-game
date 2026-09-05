@@ -315,6 +315,43 @@ export class AudioEngine {
     }
   }
 
+  candy() {
+    // a sweet little "plink-plonk" – two bouncy notes, a step higher for each
+    // candy in a row, and a sprinkle of sugar on top
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    if (now > this.comboResetAt) this.comboStep = 0;
+    this.comboResetAt = now + 1.2;
+    const base = 79 + Math.min(this.comboStep, 8);
+    this.comboStep += 1;
+    this.tone({ freq: midiToHz(base), slideTo: midiToHz(base + 5), type: 'sine', duration: 0.1, gain: 0.28 });
+    this.tone({ freq: midiToHz(base + 7), type: 'triangle', duration: 0.16, gain: 0.2, start: 0.07, release: 0.15 });
+    this.noise({ start: 0.05, duration: 0.05, gain: 0.05, filterFreq: 7000, q: 2 });
+  }
+
+  // The rainbow laser (flight mode): a charging whoosh, a bright "pyoo" sweep
+  // and a rising rainbow arpeggio while the beam is out.
+  laser() {
+    this.noise({ duration: 0.25, gain: 0.2, filterFreq: 900, filterType: 'bandpass', q: 0.8 });
+    this.tone({ freq: 180, slideTo: 2600, type: 'sawtooth', duration: 0.32, gain: 0.16, release: 0.1 });
+    this.tone({ freq: 360, slideTo: 3200, type: 'square', duration: 0.24, gain: 0.06, start: 0.03, release: 0.1 });
+    this.tone({ freq: 2400, slideTo: 1200, type: 'sine', duration: 0.5, gain: 0.12, start: 0.3, release: 0.3 });
+    [72, 76, 79, 83, 86, 89, 91].forEach((n, i) =>
+      this.tone({ freq: midiToHz(n), type: 'triangle', duration: 0.14, gain: 0.14, start: 0.1 + i * 0.05, release: 0.25 }));
+    for (let i = 0; i < 6; i++) this.noise({ start: 0.15 + i * 0.08, duration: 0.03, gain: 0.05, filterFreq: 5000 + i * 800, q: 3 });
+  }
+
+  // The laser meter just filled up.
+  laserReady() {
+    this.tone({ freq: midiToHz(88), type: 'triangle', duration: 0.1, gain: 0.16 });
+    this.tone({ freq: midiToHz(95), type: 'triangle', duration: 0.25, gain: 0.16, start: 0.09, release: 0.25 });
+    this.noise({ start: 0.09, duration: 0.12, gain: 0.05, filterFreq: 8000, q: 1 });
+  }
+
+  // Fire pressed while the meter is still charging: a soft, low "not yet".
+  laserEmpty() {
+    this.tone({ freq: 300, slideTo: 200, type: 'triangle', duration: 0.18, gain: 0.14, release: 0.05 });
+  }
+
   crystal() {
     const notes = [84, 88, 91, 96];
     notes.forEach((n, i) => this.tone({ freq: midiToHz(n), type: 'sine', duration: 0.5, gain: 0.2, start: i * 0.05, release: 0.3 }));

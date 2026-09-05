@@ -20,6 +20,7 @@ spindelvänner (Spidey-inspirerade hjältekompisar) som hejar på.
 | Stjärna (samlas genom att springa på den) | +10 |
 | Bubbla (poppas med **musklick**) | +25 |
 | Regnbågskristall (ovanlig, ofta i luften → kräver hopp) | +50 |
+| Godisbit (bara i flygläget) | +15 |
 | Bana klarad | +200 + 50 per hjärta kvar |
 | Krock med hinder | −1 hjärta (ingen poängförlust) |
 
@@ -176,3 +177,15 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 | För svårt att få 2 och 3 stjärnor på målkortet | Gränserna sänkta från 80 % / 45 % av banans stjärnor till 50 % / 20 % (`STAR_RATING` i config.js, `starRating()` i scoreboard.js). En bana utan stjärnor ger alltid tre | `tests/scoreboard.test.mjs`; Playwright (`temp/pw-stars.js`): 46/91 → 3 stjärnor, 19/91 → 2, 10/91 → 1 |
 | Flygande enhörningar i himlen | Fem bevingade enhörningar (kropp, horn, regnbågsman och -svans, indragna ben, tre-fjädriga vingar som flaxar) korsar himlen i bakgrunden på höjd 7–16, 60–130 enheter bort, i olika riktning, fart och storlek; guppar och lutar sig lätt, dyker upp igen från motsatt sida | Playwright (`temp/pw-sky.js`): 3–4 av 5 inom kamerans bild i meny, bana 1 och natt; skärmdumpar `shot-sky-level1.png`, `shot-sky-closeup.png` |
 | Rensa historik | `data/scores.json` = `[]`, Edge-profilens localStorage tömd (namnrymd v3 oförändrad) | menyn visar "Ingen har spelat än" |
+
+
+## Provspelning 7 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| Stjärnbetyget fortfarande lite för hårt | Gränserna sänkta från 50 % / 20 % till 35 % / 12 % (`STAR_RATING` i config.js) | `tests/scoreboard.test.mjs`; Playwright (`temp/pw-stars.js`): 34/68 → 3 stjärnor, 14/68 → 2, 7/68 → 1 |
+| Nytt spelsätt: flyga i stället för att springa | Menyn har två knappar, **🌈 Galoppera på regnbågen** / **☁️ Flyga i himlen**; valet sparas i `settings.mode`. I flygläget får enhörningen tre-fjädriga vingar som flaxar (snabbare vid stigning), `W`/`↑` stiger och `S`/`↓` sjunker (hålls inne, `FLIGHT.climbSpeed`), höjd 0,6–5,4; hoppa/ducka är avstängda. Banan genereras av `generateFlightCourse()` i levels.js: bara samlarobjekt (stjärnbågar, stjärnvågor, godisspår, godisringar runt en kristall, kristallmoln, bubblor, hjärta) på höjder 1–5, inga hinder. Nytt objekt **godisbit** (+15, randig kula med vridna omslagsändar, eget plink-ljud). Alla objekt inom 2 enheter i sidled, 2,4 i höjd och 5,5 framåt dras in mot enhörningen (`FLIGHT.attract`, `pullEntity()` i game.js) – ingen krock behövs. Vid mål glider hon ner och dansar med vingarna ute | `tests/levels.test.mjs` (bara samlarobjekt, nåbar höjd, godis och hjärta på varje bana, determinism); Playwright (`temp/pw-fly.js`): bana 1 flugen av botten utan skott: 12 indragningar före 15 %, 0 träffar, vingar synliga, HUD-mätaren visas; med skott: 68/68 stjärnor, 7 hjärtan, 2675 p; galoppläget oförändrat (hinder, inga vingar, ingen mätare). Skärmdumpar `shot-fly-level1.png`, `shot-fly-finish.png`, `shot-candy.png` |
+| Regnbågslaser från hornet | Var femtonde procent av banlängden (`FLIGHT.laserEvery`) laddas ett skott; mätaren nere till vänster (`#hud-laser`: horn-ikon, regnbågsstapel, `E`-tangent) pulserar gult med ✨ och texten *REDO! Tryck E* när den är full, plus ett pling och tipset första gången. `E` (bredvid W och D; ignoreras i namnrutan som alla tangenter) eller handkontrollens `X` skjuter: en bred regnbågstunnel med sju regnbågsringar som rusar framåt från hornet (`RainbowBeam` i effects.js, normal blending – additiv färg försvann mot himlen), skjutljud (sågtandssvep + regnbågsarpeggio, `laser()` i audio.js), och allt som syns framför enhörningen samlas in i en våg närmast först (40 ms mellan, `laserRippleSeconds`) med vanliga poäng, ljud och glitter. `E` med tom mätare: mjukt dunk + mätaren skakar | Playwright (`temp/pw-fly.js`): mätaren full vid 16,3 % av banan, `E` → 1 skott, 43 mål → 43 träffar, +805 p, mätaren tillbaka till 0 och "laddar…"; `E` under laddning → `denied`, inget skott; "Elsa" går att skriva i namnrutan; `E` i galoppläget gör inget. Offline-ljud (`temp/pw-audio4.js`): laser peak 0,17, ready 0,09, empty 0,05. Skärmdumpar `shot-fly-ready.png`, `shot-beam-1.png`, `shot-beam-2.png` |
+| Topplista och spelsätt | Poängraden får `mode` ('run'/'fly', servern sanerar); flugna omgångar visas med ☁️ före banan. Progress är gemensam | `tests/server.test.mjs`, `tests/scoreboard.test.mjs`; `temp/pw-scores.js` (☁️ på raderna) |
+| Menykortet högre än fönstret klippte titeln | `.card { margin: auto }` – ett kort som är högre än fönstret rullar i stället för att tappa toppen | mätt: kort 995 px vid 900 px viewport |
+| Rensa historik | `data/scores.json` = `[]`, Edge-profilens localStorage tömd | menyn visar "Ingen har spelat än" |

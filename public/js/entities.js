@@ -1,4 +1,4 @@
-// Course objects: collectibles (star, airStar, crystal, bubble, heart) and
+// Course objects: collectibles (star, airStar, crystal, bubble, heart, candy) and
 // obstacles (rock, fence, arch, cloud). Shared geometry/materials, one mesh group per
 // live entity. Collision maths lives in game.js; this file only builds and
 // animates the meshes.
@@ -47,6 +47,14 @@ const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.22, bevelEnabl
 heartGeo.center();
 const heartMat = new THREE.MeshStandardMaterial({ color: 0xff4f8b, emissive: 0xff2d6f, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.1 });
 const heartGlowMat = new THREE.MeshBasicMaterial({ color: 0xffb3d1, transparent: true, opacity: 0.25, depthWrite: false });
+
+// Candy (flight mode): a wrapped sweet – a striped ball with two twisted wrapper ends.
+const candyGeo = new THREE.SphereGeometry(0.36, 16, 12);
+const candyEndGeo = new THREE.ConeGeometry(0.16, 0.3, 8);
+const candyColors = [0xff5d8f, 0xff9f43, 0x7bed9f, 0x70c1ff, 0x9b7bff];
+const candyMats = candyColors.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.1 }));
+const candyStripeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.3, roughness: 0.4 });
+const candyStripeGeo = new THREE.TorusGeometry(0.36, 0.05, 6, 24);
 
 const rockGeo = new THREE.DodecahedronGeometry(0.75, 0);
 const rockMat = new THREE.MeshStandardMaterial({ color: 0xb59cd9, roughness: 0.9, flatShading: true });
@@ -102,6 +110,32 @@ const builders = {
     g.userData.spin = true;
     g.userData.float = true;
     g.userData.pulse = true;
+    return g;
+  },
+  candy() {
+    const g = new THREE.Group();
+    const mat = candyMats[Math.floor(Math.random() * candyMats.length)];
+    g.add(new THREE.Mesh(candyGeo, mat));
+    for (const a of [-0.9, 0, 0.9]) {                 // white stripes around the ball
+      const stripe = new THREE.Mesh(candyStripeGeo, candyStripeMat);
+      stripe.rotation.y = Math.PI / 2;
+      stripe.rotation.x = a;
+      g.add(stripe);
+    }
+    for (const side of [-1, 1]) {                     // twisted wrapper ends
+      const end = new THREE.Mesh(candyEndGeo, mat);
+      end.position.x = side * 0.5;
+      end.rotation.z = side * -Math.PI / 2;
+      g.add(end);
+      const tip = new THREE.Mesh(sphereGeo, candyStripeMat);
+      tip.scale.setScalar(0.08);
+      tip.position.x = side * 0.66;
+      g.add(tip);
+    }
+    g.position.y = OBJECT.candy.y;
+    g.scale.setScalar(1.3);                           // a sweet should be as easy to spot as a star
+    g.userData.spin = true;
+    g.userData.float = true;
     return g;
   },
   bubble() {
@@ -201,14 +235,14 @@ const builders = {
 };
 
 // `bubbleScale` multiplies the bubble size (the calm levels use big bubbles).
+// An item with its own `y` (bubbles, everything on a flight course) hangs at
+// that height instead of the type's default.
 export function createEntity(item, bubbleScale = 1) {
   const mesh = builders[item.type]();
   const x = item.type === 'bubble' ? item.x : laneX(item.lane);
   mesh.position.x = x;
-  if (item.type === 'bubble') {
-    mesh.position.y = item.y;
-    mesh.scale.setScalar(bubbleScale);
-  }
+  if (item.y !== undefined) mesh.position.y = item.y;
+  if (item.type === 'bubble') mesh.scale.setScalar(bubbleScale);
   mesh.userData.baseY = mesh.position.y;
   mesh.userData.phase = Math.random() * Math.PI * 2;
   return {
@@ -220,6 +254,7 @@ export function createEntity(item, bubbleScale = 1) {
     mesh,
     d: item.d,
     active: true,
+    pulled: false,          // flight mode: being drawn towards the unicorn
     isBubble: item.type === 'bubble',
     isObstacle: item.type === 'rock' || item.type === 'fence' || item.type === 'arch' || item.type === 'cloud',
   };
@@ -227,6 +262,7 @@ export function createEntity(item, bubbleScale = 1) {
 
 export function animateEntity(entity, t, dt) {
   const m = entity.mesh;
+  if (entity.pulled) { if (m.userData.spin) m.rotation.y += dt * 6; return; }  // position is driven by the pull
   if (m.userData.spin) m.rotation.y += dt * 2.2;
   if (m.userData.float) {
     m.position.y = m.userData.baseY + Math.sin(t * 2.5 + m.userData.phase) * 0.18;

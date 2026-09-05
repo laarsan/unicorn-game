@@ -1,5 +1,6 @@
 // The player character: a chubby, big-eyed unicorn built from primitives,
-// with a procedural gallop, jump, duck and hurt animation.
+// with a procedural gallop, jump, duck and hurt animation – and wings that
+// unfold in flight mode.
 // The unicorn faces -z (the world scrolls toward +z).
 
 import * as THREE from '../vendor/three.module.js';
@@ -14,6 +15,8 @@ const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const cheekMat = new THREE.MeshStandardMaterial({ color: PALETTE.cheek, roughness: 0.8 });
 const innerEarMat = new THREE.MeshStandardMaterial({ color: 0xffc9dc, roughness: 0.8 });
 const rainbowMats = PALETTE.rainbow.map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, emissive: c, emissiveIntensity: 0.12 }));
+const wingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, emissive: 0xfff3fa, emissiveIntensity: 0.35 });
+const WING_FLAP_HZ = 2.4;
 
 const sphereGeo = new THREE.SphereGeometry(1, 20, 16);
 const legGeo = new THREE.CylinderGeometry(0.13, 0.12, 0.62, 12);
@@ -42,7 +45,9 @@ export class Unicorn {
     // The gallop phase is accumulated per frame (not t × frequency): with a
     // changing speed the product would jump and make the legs flicker.
     this.gallopPhase = 0;
+    this.flapPhase = 0;
     this.danceTime = 0;
+    this.wings = [];
     this.build();
   }
 
@@ -142,6 +147,23 @@ export class Unicorn {
       this.legs.push(leg);
       b.add(leg);
     });
+    // wings (flight mode only): three overlapping feathers per side, hinged at
+    // the shoulder – the same shape as the unicorns crossing the sky
+    for (const side of [-1, 1]) {
+      const pivot = new THREE.Group();
+      pivot.position.set(side * 0.42, 1.4, -0.05);
+      for (let i = 0; i < 3; i++) {
+        const feather = sphere(wingMat, 1, side * (0.62 + i * 0.6), i * 0.1, 0.05 + i * 0.12, 0.78, 0.12, 0.46 - i * 0.06);
+        feather.rotation.y = side * i * 0.22;
+        pivot.add(feather);
+      }
+      // a rainbow tip on the outermost feather
+      pivot.add(sphere(rainbowMats[side < 0 ? 4 : 5], 0.13, side * 2.05, 0.2, 0.3));
+      pivot.userData.side = side;
+      pivot.visible = false;
+      this.wings.push(pivot);
+      b.add(pivot);
+    }
     // soft blob shadow so jumps read clearly
     const shadowGeo = new THREE.CircleGeometry(0.75, 24);
     const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
@@ -151,18 +173,28 @@ export class Unicorn {
     this.group.add(this.shadow);
   }
 
-  // t = seconds, speed = world speed, airborne = jumping, y = jump height
-  animate(t, dt, { speed, airborne, y, ducking, hurt, celebrating }) {
+  // t = seconds, speed = world speed, airborne = jumping, y = jump height,
+  // flying = flight mode (wings out, legs tucked), vy = vertical speed
+  // wings = show the wings even when not flying (landing, victory dance)
+  animate(t, dt, { speed, airborne, y, ducking, hurt, celebrating, flying = false, wings = false, vy = 0 }) {
     const gallopHz = Math.max(0.6, speed / 5.5);
     this.gallopPhase = (this.gallopPhase + gallopHz * Math.PI * 2 * dt) % (Math.PI * 2);
     const phase = this.gallopPhase;
     this.danceTime = celebrating ? this.danceTime + dt : 0;
     const dance = this.danceTime;
+    // wings: flap faster while climbing, glide-slow while sinking
+    const flapHz = WING_FLAP_HZ + Math.max(0, vy) * 0.25 - Math.max(0, -vy) * 0.12;
+    this.flapPhase = (this.flapPhase + flapHz * Math.PI * 2 * dt) % (Math.PI * 2);
+    const lift = 0.1 + Math.sin(this.flapPhase) * 0.65;
+    for (const w of this.wings) {
+      w.visible = flying || wings;
+      w.rotation.z = w.userData.side * lift;
+    }
     // legs
     for (const leg of this.legs) {
       const offset = leg.userData.front ? 0 : Math.PI;
       const side = leg.userData.side === 0 ? 0.15 : -0.15;
-      if (airborne) {
+      if (airborne || flying) {
         leg.rotation.x = THREE.MathUtils.lerp(leg.rotation.x, leg.userData.front ? -0.9 : 0.8, dt * 10);
       } else if (celebrating) {
         // happy prancing: front legs kick high, back legs skip
@@ -171,9 +203,13 @@ export class Unicorn {
         leg.rotation.x = Math.sin(phase + offset + side) * 0.5;
       }
     }
-    // body bob + pitch
-    const bob = airborne ? 0 : Math.abs(Math.sin(phase)) * 0.12;
-    const pitch = airborne ? THREE.MathUtils.clamp(-0.35 + y * 0.12, -0.35, 0.25) : Math.sin(phase) * 0.06;
+    // body bob + pitch (in flight: hover with the wing beats, nose up when climbing)
+    let bob = airborne ? 0 : Math.abs(Math.sin(phase)) * 0.12;
+    let pitch = airborne ? THREE.MathUtils.clamp(-0.35 + y * 0.12, -0.35, 0.25) : Math.sin(phase) * 0.06;
+    if (flying) {
+      bob = Math.sin(this.flapPhase) * 0.06;
+      pitch = THREE.MathUtils.clamp(-vy * 0.05, -0.35, 0.3) + Math.sin(this.flapPhase) * 0.03;
+    }
     if (celebrating) {
       // Victory dance on the spot: hops, a pirouette and a happy wiggle.
       this.body.position.y = Math.abs(Math.sin(dance * 7)) * 0.55;
@@ -206,7 +242,7 @@ export class Unicorn {
       const b = s.userData.base;
       const k = i / 6;
       const wag = celebrating ? Math.sin(dance * 9 + k * 2) * 0.5 * k : Math.sin(t * 5 + k * 2.5) * 0.35 * k;
-      s.position.set(b.x + wag, b.y + Math.sin(t * 6.5 + k * 3) * 0.12 * k + (airborne ? k * 0.4 : 0) + (celebrating ? k * 0.3 : 0), b.z);
+      s.position.set(b.x + wag, b.y + Math.sin(t * 6.5 + k * 3) * 0.12 * k + (airborne || flying ? k * 0.4 : 0) + (celebrating ? k * 0.3 : 0), b.z);
     });
     // horn shimmer
     hornMat.emissiveIntensity = 0.3 + Math.sin(t * 5) * 0.15;

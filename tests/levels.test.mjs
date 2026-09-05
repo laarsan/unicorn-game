@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  LEVELS, CHUNKS, generateCourse, LEVEL_COUNT, CALM_LEVELS, SPEED_CALM, SPEED_MAX,
+  LEVELS, CHUNKS, generateCourse, generateFlightCourse, FLIGHT_CHUNKS, LEVEL_COUNT, CALM_LEVELS, SPEED_CALM, SPEED_MAX,
   BUBBLE_SCALE_CALM, BUBBLE_SCALE_MAX_LEVEL,
 } from '../public/js/levels.js';
+import { FLIGHT } from '../public/js/config.js';
 
 const OBSTACLES = new Set(['rock', 'fence', 'arch', 'cloud']);
 
@@ -108,4 +109,33 @@ test('the three songs rotate across consecutive levels', () => {
   assert.equal(new Set(songs).size, 3, 'all three songs are used');
   for (let i = 1; i < songs.length; i++) assert.notEqual(songs[i], songs[i - 1], `level ${i + 1} changes tune`);
   assert.deepEqual(songs.slice(0, 6), [0, 1, 2, 0, 1, 2]);
+});
+
+test('flight course: only collectibles, every item at a reachable height, candy on every level', () => {
+  const COLLECTIBLES = new Set(['star', 'airStar', 'crystal', 'bubble', 'heart', 'candy']);
+  for (const l of LEVELS) {
+    const items = generateFlightCourse(l);
+    assert.ok(items.length > 30, `level ${l.id} has a flight course (${items.length} items)`);
+    for (const it of items) {
+      assert.ok(COLLECTIBLES.has(it.type), `level ${l.id}: ${it.type} is a collectible`);
+      assert.ok(!OBSTACLES.has(it.type), `level ${l.id}: no obstacles in the sky`);
+      assert.equal(typeof it.y, 'number', `level ${l.id}: ${it.type} carries a height`);
+      // the unicorn's body centre sits 1 above its feet, and it reaches things FLIGHT.attract.dy away
+      assert.ok(it.y >= FLIGHT.minY && it.y <= FLIGHT.maxY + 1 + FLIGHT.attract.dy, `level ${l.id}: ${it.type} at y=${it.y} is reachable`);
+    }
+    assert.ok(items.some((i) => i.type === 'candy'), `level ${l.id} has candy`);
+    assert.ok(items.some((i) => i.type === 'star'), `level ${l.id} has stars (for the star rating)`);
+    assert.ok(items.some((i) => i.type === 'heart'), `level ${l.id} has a heart`);
+    assert.ok(items[items.length - 1].d < l.length - 12, `level ${l.id}: the sky is clear before the gate`);
+    assert.deepEqual(generateFlightCourse(l), items, `level ${l.id} flight course is deterministic`);
+  }
+});
+
+test('flight chunks all return positioned items with heights', () => {
+  const rng = () => 0.5;
+  for (const [name, fn] of Object.entries(FLIGHT_CHUNKS)) {
+    const chunk = fn(rng, LEVELS[0]);
+    assert.ok(chunk.length > 0 && chunk.items.length > 0, `${name} has items`);
+    for (const it of chunk.items) assert.ok(typeof it.y === 'number' && it.y > 0, `${name}: ${it.type} has a height`);
+  }
 });

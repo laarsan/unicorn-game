@@ -18,6 +18,15 @@
       <div id="hud-score" class="hud-box">⭐ 0</div>
     </div>
     <div id="hud-progress"><div id="hud-progress-fill"></div><div id="hud-progress-flag">🏁</div><div id="hud-progress-unicorn">🦄</div></div>
+    <!-- flight mode: rainbow laser charge meter -->
+    <div id="hud-laser" class="hidden">
+      <span class="laser-horn">🦄</span>
+      <div class="laser-body">
+        <div id="hud-laser-label" class="laser-label">🌈 Regnbågslaser</div>
+        <div class="laser-meter"><div id="hud-laser-fill"></div><span class="laser-sparkle">✨</span></div>
+      </div>
+      <kbd class="laser-key">E</kbd>
+    </div>
     <div id="tip" class="hidden"><span id="tip-icon"></span><span id="tip-text"></span></div>
     <div id="countdown" class="hidden"></div>
     <div id="wow" class="hidden"></div>
@@ -38,6 +47,10 @@
         </div>
         <div id="players" class="players hidden"></div>
       </div>
+      <div class="mode-row" role="group" aria-label="Spelsätt">
+        <button id="btn-mode-run" class="mode" type="button">🌈 Galoppera på regnbågen</button>
+        <button id="btn-mode-fly" class="mode" type="button">☁️ Flyga i himlen</button>
+      </div>
       <button id="btn-continue" class="big primary hidden">⏩ Fortsätt på bana <span id="continue-level">1</span></button>
       <button id="btn-start" class="big primary">▶ Starta äventyret</button>
       <div class="controls-help">
@@ -46,6 +59,7 @@
         <div><kbd>S</kbd><kbd>↓</kbd> ducka</div>
         <div>🖱️ klicka på bubblorna</div>
         <div>💖 fånga hjärtan – extra liv</div>
+        <div><kbd>E</kbd> regnbågslaser när du flyger</div>
       </div>
       <div id="menu-scores" class="scores"></div>
       <div class="row">

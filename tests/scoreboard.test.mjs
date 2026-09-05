@@ -44,11 +44,17 @@ test('the list is capped at MAX_SCORES distinct players', () => {
   assert.ok(!list.some((s) => s.score === 100));
 });
 
-test('star rating is generous: half the stars gives three, a fifth gives two', () => {
-  assert.equal(starRating(10, 20), 3);
-  assert.equal(starRating(4, 20), 2);
-  assert.equal(starRating(3, 20), 1);
+test('star rating is generous: a third of the stars gives three, an eighth gives two', () => {
+  assert.equal(starRating(7, 20), 3);
+  assert.equal(starRating(6, 20), 2);
+  assert.equal(starRating(3, 20), 2);
+  assert.equal(starRating(2, 20), 1);
   assert.equal(starRating(0, 20), 1);
   assert.equal(starRating(0, 0), 3, 'a level without stars is always three');
-  assert.ok(STAR_RATING.three <= 0.5 && STAR_RATING.two <= 0.2, 'thresholds must stay at or below play-test 6 values');
+  assert.ok(STAR_RATING.three <= 0.35 && STAR_RATING.two <= 0.12, 'thresholds must stay at or below play-test 7 values');
+});
+
+test('a flight-mode entry keeps its mode through the merge', () => {
+  const list = upsertScore([], { ...row('Zelda', 900, 3), mode: 'fly' });
+  assert.equal(list[0].mode, 'fly');
 });

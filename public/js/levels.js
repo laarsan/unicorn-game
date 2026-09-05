@@ -337,8 +337,99 @@ export function generateCourse(level) {
   return items;
 }
 
+// ---------- flight mode ----------
+// The same levels, but the course hangs in the air: only collectibles (the
+// usual ones plus candy), laid out in arcs, waves and clusters at heights the
+// flying unicorn reaches with W/S. Nothing to crash into.
+const FLY_Y = { low: 1.0, mid: 2.4, high: 4.0, top: 5.0 };
+const flyHeight = (rng) => FLY_Y.low + rng() * (FLY_Y.top - FLY_Y.low);
+
+export const FLIGHT_CHUNKS = {
+  // a rainbow-shaped arc of stars rising and falling in one lane
+  starArc(rng) {
+    const lane = pickLane(rng);
+    const n = 7;
+    const base = FLY_Y.low + rng() * 1.2;
+    const items = Array.from({ length: n }, (_, i) => ({ d: i * 1.9, lane, type: 'star', y: round1(base + Math.sin((i / (n - 1)) * Math.PI) * 3.2) }));
+    return { length: n * 1.9, items };
+  },
+  // a wave of stars sweeping across all three lanes
+  starWave(rng) {
+    const dir = rng() < 0.5 ? -1 : 1;
+    const items = [];
+    for (let i = 0; i < 9; i++) {
+      const lane = Math.max(-1, Math.min(1, dir * (Math.floor(i / 3) - 1)));
+      items.push({ d: i * 1.7, lane, type: 'star', y: round1(FLY_Y.mid + Math.sin(i * 0.9) * 1.6) });
+    }
+    return { length: 9 * 1.7, items };
+  },
+  // a zigzag trail of candy pieces climbing through the sky
+  candyTrail(rng) {
+    const start = pickLane(rng);
+    const items = [];
+    let lane = start;
+    for (let i = 0; i < 6; i++) {
+      items.push({ d: i * 2.1, lane, type: 'candy', y: round1(FLY_Y.low + 0.5 + i * 0.6 + rng() * 0.4) });
+      if (i % 2 === 1) lane = lane === start ? otherLanes(start)[Math.floor(rng() * 2)] : start;
+    }
+    return { length: 6 * 2.1, items };
+  },
+  // a handful of candy hanging in a ring around a crystal
+  candyRing(rng) {
+    const lane = pickLane(rng);
+    const y = FLY_Y.mid + rng() * 1.5;
+    const items = [{ d: 3, lane, type: 'crystal', y: round1(y) }];
+    [[0, -1.2], [1.5, 0], [3, 1.2], [4.5, 0], [6, -1.2]].forEach(([d, dy]) => items.push({ d, lane, type: 'candy', y: round1(y + dy) }));
+    return { length: 7.5, items };
+  },
+  // crystals high up, one per lane
+  crystalCloud(rng) {
+    const items = [-1, 0, 1].map((lane, i) => ({ d: i * 2.4, lane, type: 'crystal', y: round1(FLY_Y.high + rng() * 1.2) }));
+    return { length: 7.2, items };
+  },
+  bubbleCloud(rng, level) {
+    const scale = level ? level.bubbleScale : 1;
+    const n = 2 + Math.floor(rng() * 2);
+    const spacing = 2.5 + 1.6 * scale;
+    const items = [];
+    for (let i = 0; i < n; i++) items.push({ d: i * spacing, lane: 0, type: 'bubble', x: (rng() - 0.5) * 8, y: round1(1.6 + 0.9 * scale + rng() * 1.6) });
+    return { length: n * spacing, items };
+  },
+  // a heart with two candies leading in – the extra life adds finish points here
+  heartGift(rng) {
+    const lane = pickLane(rng);
+    const y = flyHeight(rng);
+    return { length: 6, items: [{ d: 0.5, lane, type: 'candy', y: round1(y) }, { d: 2, lane, type: 'candy', y: round1(y) }, { d: 4, lane, type: 'heart', y: round1(y) }] };
+  },
+};
+const FLIGHT_WEIGHTS = { starArc: 4, starWave: 3, candyTrail: 4, candyRing: 2, crystalCloud: 2, bubbleCloud: 2, heartGift: 1 };
+
+export function generateFlightCourse(level) {
+  const rng = makeRng(level.seed + 7);
+  const items = [];
+  const intro = 30;
+  const outro = 30;
+  let d = intro;
+  let last = null;
+  let heartPlaced = false;
+  while (d < level.length - outro) {
+    let name = weightedPick(rng, FLIGHT_WEIGHTS);
+    if (name === last && rng() < 0.6) name = weightedPick(rng, FLIGHT_WEIGHTS);
+    if (!heartPlaced && d >= level.length * HEART_GUARANTEE_AT) name = 'heartGift';
+    if (name === 'heartGift') heartPlaced = true;
+    const chunk = FLIGHT_CHUNKS[name](rng, level);
+    for (const it of chunk.items) items.push({ ...it, d: d + it.d });
+    d += chunk.length + level.gap[0] * 0.6 + rng() * (level.gap[1] - level.gap[0]) * 0.6;
+    last = name;
+  }
+  items.sort((a, b) => a.d - b.d);
+  return items;
+}
+
 export const TIPS = {
   move: { text: 'Byt fil med A och D eller ← →', icon: '⬅️➡️' },
+  fly: { text: 'Flyg upp med W eller ↑ och ner med S eller ↓', icon: '☁️' },
+  laser: { text: 'Mätaren är full – tryck E för regnbågslaser!', icon: '🌈' },
   jump: { text: 'Hoppa med MELLANSLAG, W eller ↑', icon: '⬆️' },
   duck: { text: 'Ducka med S eller ↓', icon: '⬇️' },
   bubble: { text: 'Klicka på bubblorna med musen!', icon: '🖱️' },

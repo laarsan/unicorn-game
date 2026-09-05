@@ -1,13 +1,17 @@
 // Core game: state machine, level runtime, collisions, camera and render loop.
 // Positions along the course are derived from the travelled distance each
 // frame (z = -(item.d - distance)) so the layout is exact and deterministic.
+// Two game modes share everything: 'run' (gallop on the rainbow, jump and
+// duck past obstacles) and 'fly' (the unicorn flies, W/S climb and sink, every
+// collectible is pulled in from a distance and a rainbow laser from the horn
+// clears the whole sky ahead once the meter has charged).
 
 import * as THREE from '../vendor/three.module.js';
 import {
   LANE_WIDTH, SPAWN_Z, DESPAWN_Z, GRAVITY, JUMP_VELOCITY, LANE_CHANGE_SPEED, UNICORN_HALF_DEPTH,
-  INVULNERABLE_SECONDS, HEARTS_PER_LEVEL, MAX_HEARTS, SPEED_RAMP_SECONDS, POINTS, OBJECT, PALETTE,
+  INVULNERABLE_SECONDS, HEARTS_PER_LEVEL, MAX_HEARTS, SPEED_RAMP_SECONDS, POINTS, OBJECT, PALETTE, FLIGHT,
 } from './config.js';
-import { LEVELS, generateCourse, TIPS } from './levels.js';
+import { LEVELS, generateCourse, generateFlightCourse, TIPS } from './levels.js';
 import { World } from './world.js';
 import { Unicorn } from './unicorn.js';
 import { createEntity, animateEntity } from './entities.js';
@@ -38,6 +42,8 @@ const ARCH_TAIL_TOLERANCE = 0.25;    // arch z beyond which standing up again is
 const JUMP_CLEAR_TOLERANCE = 0.35;   // feet may be this far below an obstacle's top and still clear it
 const HEY_COOLDOWN_SECONDS = 1.2;   // the swinging friends never shout over each other
 const TIP_FOR_TYPE = { rock: 'jump', fence: 'jump', arch: 'duck', bubble: 'bubble', heart: 'heart', cloud: 'cloud' };
+const HORN_TIP = new THREE.Vector3(0, 0.55, 0);   // in the horn group's space
+const LASER_SHAKE = 0.5;
 
 export class Game {
   constructor({ canvas, ui, audio, input }) {
@@ -48,8 +54,9 @@ export class Game {
     this.state = 'loading';
     this.t = 0;
     this.lastTime = 0;
-    this.debug = { autoplay: false, timeScale: 1, hits: [], heys: 0 };
+    this.debug = { autoplay: false, timeScale: 1, hits: [], heys: 0, pulls: 0, lasers: 0, zaps: 0, noLaser: false };
     this.settings = loadSettings();
+    this.mode = this.settings.mode === 'fly' ? 'fly' : 'run';
     this.scores = [];
     this.setupThree();
     this.world = new World(this.scene);
@@ -61,6 +68,8 @@ export class Game {
     this.swingers.onCall = (i, pan) => this.friendCalls(i, pan);
     this.lastHeyAt = -Infinity;
     this.raycaster = new THREE.Raycaster();
+    this.beamOrigin = new THREE.Vector3();
+    this.pullTarget = new THREE.Vector3();
     this.shake = 0;
     this.player = { lane: 0, x: 0, y: 0, vy: 0, airborne: false, ducking: false };
     this.run = { levelIndex: 0, totalScore: 0, name: '' };
@@ -71,6 +80,7 @@ export class Game {
     window.addEventListener('resize', () => this.resize());
     this.audio.setMuted(this.settings.muted);
     this.ui.setMuted(this.settings.muted);
+    this.ui.setMode(this.mode);
   }
 
   setupThree() {
@@ -141,6 +151,14 @@ export class Game {
     savePlayers(this.players);
   }
 
+  // 'run' or 'fly' – chosen in the menu, remembered between sessions.
+  setMode(mode) {
+    this.mode = mode === 'fly' ? 'fly' : 'run';
+    this.settings.mode = this.mode;
+    saveSettings(this.settings);
+    this.ui.setMode(this.mode);
+  }
+
   startRun(levelIndex, totalScore) {
     const name = this.ui.playerName || DEFAULT_PLAYER_NAME;
     this.progress = getPlayer(this.players, name);
@@ -157,10 +175,12 @@ export class Game {
 
   startLevel(index) {
     const level = LEVELS[index];
+    const flying = this.mode === 'fly';
     this.clearLevel();
     this.level = {
       def: level,
-      course: generateCourse(level),
+      flying,
+      course: flying ? generateFlightCourse(level) : generateCourse(level),
       nextItem: 0,
       entities: [],
       distance: 0,
@@ -174,16 +194,23 @@ export class Game {
       countdownIndex: -1,
       countdownTimer: 0,
       rampTimer: 0,
+      // flight mode: the laser recharges with distance travelled
+      laserFiredAt: 0,
+      laserCharge: 0,
+      laserReadyPlayed: false,
+      laserQueue: [],
     };
     this.level.starsTotal = this.level.course.filter((i) => i.type === 'star' || i.type === 'airStar').length;
     this.world.setTheme(level.theme);
     this.swingers.setVisible(Boolean(level.theme.spiders));
     this.gate.place(-level.length);
-    Object.assign(this.player, { lane: 0, x: 0, y: 0, vy: 0, airborne: false, ducking: false });
-    this.unicorn.group.position.set(0, 0, 0);
+    Object.assign(this.player, { lane: 0, x: 0, y: flying ? FLIGHT.startY : 0, vy: 0, airborne: flying, ducking: false });
+    this.unicorn.group.position.set(0, this.player.y, 0);
     this.speed = 0;
     this.ui.setLevel(level);
     this.ui.setHud({ hearts: this.level.hearts, score: this.run.totalScore, progress: 0 });
+    this.ui.showLaser(flying);
+    if (flying) this.ui.setLaser(0);
     this.ui.showHud(true);
     this.ui.showScreen(null);
     this.ui.hideTip();
@@ -201,7 +228,8 @@ export class Game {
       this.state = 'playing';
       this.audio.startMusic({ tempo: L.def.theme.musicTempo, key: L.def.theme.musicKey, wave: L.def.theme.musicWave, song: L.def.theme.musicSong });
       this.audio.duckMusic(0.35);
-      if (L.def.tips.includes('move')) this.showTipOnce('move');
+      if (L.flying && !this.run.flyTipShown) { this.run.flyTipShown = true; this.showTipOnce('fly'); }
+      else if (L.def.tips.includes('move')) this.showTipOnce('move');
       return;
     }
     const last = L.countdownIndex === COUNTDOWN_STEPS.length - 1;
@@ -231,6 +259,7 @@ export class Game {
     I.on('right', () => this.moveLane(1));
     I.on('jump', () => this.jump());
     I.on('duck', () => this.slam());
+    I.on('fire', () => this.fireLaser());
     I.on('confirm', () => this.confirm());
     I.on('pause', () => this.togglePause());
     I.on('click', (p) => this.click(p));
@@ -244,6 +273,8 @@ export class Game {
     ui.onButton('btn-start', click(() => this.startRun(0, 0)));
     ui.onButton('btn-continue', click(() => this.continueRun()));
     ui.onButton('btn-new-player', click(() => this.ui.newPlayer()));
+    ui.onButton('btn-mode-run', click(() => this.setMode('run')));
+    ui.onButton('btn-mode-fly', click(() => this.setMode('fly')));
     ui.onNameInput((name) => this.nameTyped(name));
     ui.onButton('btn-quit', click(() => this.quit()));
     ui.onButton('btn-quit2', click(() => this.quit()));
@@ -280,6 +311,7 @@ export class Game {
 
   jump() {
     if (this.state !== 'playing' && this.state !== 'countdown') return;
+    if (this.level && this.level.flying) return;   // held keys climb instead – see updatePlayerMotion
     if (this.player.airborne) return;
     this.player.airborne = true;
     this.player.vy = JUMP_VELOCITY;
@@ -288,7 +320,67 @@ export class Game {
 
   slam() {
     if (this.state !== 'playing') return;
+    if (this.level && this.level.flying) return;
     if (this.player.airborne && this.player.vy > SLAM_VELOCITY) this.player.vy = SLAM_VELOCITY;
+  }
+
+  // ---------- flight mode: rainbow laser ----------
+
+  hornPosition() {
+    this.beamOrigin.copy(HORN_TIP);
+    return this.unicorn.horn.localToWorld(this.beamOrigin);
+  }
+
+  // Every collectible ahead of the horn is struck, nearest first, a few
+  // hundredths apart so the sky empties in a ripple and every pickup still
+  // gets its own sound, glitter and points – exactly as if it had been caught.
+  fireLaser() {
+    if (this.state !== 'playing' || !this.level || !this.level.flying) return;
+    const L = this.level;
+    if (L.laserCharge < 1) {
+      this.audio.laserEmpty();
+      this.ui.laserDenied();
+      return;
+    }
+    L.laserFiredAt = L.distance;
+    L.laserCharge = 0;
+    L.laserReadyPlayed = false;
+    this.debug.lasers += 1;
+    this.audio.laser();
+    this.effects.fireBeam(this.hornPosition(), FLIGHT.laserBeamSeconds);
+    this.shake = LASER_SHAKE;
+    const targets = L.entities
+      .filter((e) => e.active && !e.isObstacle && !e.zapped && e.mesh.position.z < FLIGHT.laserReach)
+      .sort((a, b) => b.mesh.position.z - a.mesh.position.z);
+    targets.forEach((e, i) => {
+      e.zapped = true;
+      L.laserQueue.push({ e, at: this.t + i * FLIGHT.laserRippleSeconds });
+    });
+  }
+
+  processLaserQueue() {
+    const L = this.level;
+    while (L.laserQueue.length && L.laserQueue[0].at <= this.t) {
+      const { e } = L.laserQueue.shift();
+      if (!e.active || !L.entities.includes(e)) continue;   // scrolled out behind the camera meanwhile
+      this.effects.zapBurst(e.mesh.position.clone());
+      this.collect(e);
+      this.debug.zaps += 1;
+    }
+  }
+
+  // Flight mode: a collectible within reach drifts to the unicorn on its own.
+  pullEntity(e, dt) {
+    const L = this.level, P = this.player;
+    const m = e.mesh.position;
+    const target = this.pullTarget.set(P.x, P.y + 1.0, 0);
+    const dist = target.distanceTo(m);
+    if (dist < FLIGHT.catchDistance) { this.collect(e); return; }
+    const step = Math.min(dist, (FLIGHT.pullSpeed + this.speed) * dt);
+    m.lerp(target, step / dist);
+    e.d = L.distance - m.z;      // keep the course position in step with the moved mesh
+    e.x = m.x;
+    e.y = m.y;
   }
 
   click(p) {
@@ -350,17 +442,19 @@ export class Game {
 
     const P = this.player;
     const hurt = this.level ? this.t < this.level.invulnUntil : false;
+    const flying = Boolean(this.level && this.level.flying);
     this.unicorn.group.position.set(P.x, P.y, 0);
     this.unicorn.animate(this.t, dt, {
       speed: this.state === 'countdown' ? 4 : this.speed,
       airborne: P.airborne, y: P.y, ducking: P.ducking, hurt,
       celebrating: this.state === 'levelclear-anim' || this.state === 'levelclear',
+      flying: flying && P.airborne, wings: flying, vy: P.vy,
     });
     this.world.update(dt, this.speed, this.t);
     this.gate.update(dt, 0, this.t);
     this.swingers.update(dt, this.speed, this.t);
     if (this.speed > 1) this.effects.updateTrail(dt, this.unicorn.group.position, this.speed);
-    this.effects.update(dt, this.speed);
+    this.effects.update(dt, this.speed, this.effects.beam.active ? this.hornPosition() : null);
     this.updateCamera(dt);
     this.render();
   }
@@ -405,12 +499,49 @@ export class Game {
     const dx = targetX - P.x;
     const step = LANE_CHANGE_SPEED * dt;
     P.x = Math.abs(dx) <= step ? targetX : P.x + Math.sign(dx) * step;
+    if (this.level && this.level.flying) {
+      this.updateFlight(dt);
+      return;
+    }
     if (P.airborne) {
       P.vy -= GRAVITY * dt;
       P.y += P.vy * dt;
       if (P.y <= 0) { P.y = 0; P.vy = 0; P.airborne = false; }
     }
     P.ducking = !P.airborne && this.input.ducking && this.state === 'playing';
+  }
+
+  // Flight mode: climb while a jump key is held, sink while duck is held,
+  // hover otherwise. After the finish line the unicorn glides down to land.
+  updateFlight(dt) {
+    const P = this.player;
+    const inFlight = this.state === 'playing' || this.state === 'countdown';
+    if (!inFlight) {
+      P.vy = THREE.MathUtils.damp(P.vy, -2, 4, dt);
+      P.y = Math.max(0, P.y + P.vy * dt);
+      if (P.y <= 0) { P.y = 0; P.vy = 0; P.airborne = false; }
+      P.ducking = false;
+      return;
+    }
+    const up = this.input.climbing, down = this.input.ducking;
+    const targetVy = up && !down ? FLIGHT.climbSpeed : down && !up ? -FLIGHT.climbSpeed : 0;
+    P.vy = THREE.MathUtils.damp(P.vy, targetVy, 9, dt);
+    P.y = THREE.MathUtils.clamp(P.y + P.vy * dt, FLIGHT.minY, FLIGHT.maxY);
+    if (P.y === FLIGHT.minY || P.y === FLIGHT.maxY) P.vy = 0;
+    P.airborne = true;
+    P.ducking = false;
+  }
+
+  updateLaserCharge() {
+    const L = this.level;
+    L.laserCharge = Math.min(1, (L.distance - L.laserFiredAt) / (L.def.length * FLIGHT.laserEvery));
+    if (L.laserCharge >= 1 && !L.laserReadyPlayed) {
+      L.laserReadyPlayed = true;
+      this.audio.laserReady();
+      if (!this.run.laserTipShown) { this.run.laserTipShown = true; this.showTipOnce('laser'); }
+    }
+    this.ui.setLaser(L.laserCharge);
+    this.processLaserQueue();
   }
 
   updatePlaying(dt) {
@@ -425,6 +556,7 @@ export class Game {
     this.updatePlayerMotion(dt);
     this.spawnAhead();
     this.updateEntities(dt);
+    if (L.flying) this.updateLaserCharge();
     this.gate.group.position.z = -(L.def.length - L.distance);
     this.checkTips();
 
@@ -460,6 +592,18 @@ export class Game {
       animateEntity(e, this.t, dt);
       if (!e.active) continue;
       const dx = Math.abs(e.mesh.position.x - P.x);
+      if (L.flying) {
+        // No need to touch anything: whatever comes within reach is drawn in.
+        // A laser target stays put until the ripple reaches it.
+        if (e.zapped) continue;
+        if (e.pulled) { this.pullEntity(e, dt); continue; }
+        const reachY = FLIGHT.attract.dy + (e.isBubble ? e.radius * 0.5 : 0);
+        if (z < FLIGHT.laserReach && z > -FLIGHT.attract.ahead && dx < FLIGHT.attract.dx && Math.abs(e.y - bodyY) < reachY) {
+          e.pulled = true;
+          this.debug.pulls += 1;
+        }
+        continue;
+      }
       if (e.isObstacle) {
         const spec = OBJECT[e.type];
         // Arches only matter while they are over the unicorn's head/neck (front
@@ -489,6 +633,7 @@ export class Game {
     const pos = e.mesh.position.clone();
     let points = POINTS.star, color = 0xffe14a, label = null;
     if (e.type === 'bubble') { points = POINTS.bubble; color = 0x9fdcff; this.audio.bubble(); }
+    else if (e.type === 'candy') { points = POINTS.candy; color = 0xff8ad8; this.audio.candy(); }
     else if (e.type === 'crystal') { points = POINTS.crystal; color = 0x7fd8ff; this.audio.crystal(); }
     else if (e.type === 'heart') {
       points = POINTS.heart; color = 0xff5d8f; this.audio.heart();
@@ -617,7 +762,7 @@ export class Game {
   // after level 3 is on it too. `recording` lets the finish screen wait for
   // the last save before showing the list.
   recordScore() {
-    const entry = { name: this.run.name || DEFAULT_PLAYER_NAME, score: this.run.totalScore, levels: this.run.levelIndex + 1 };
+    const entry = { name: this.run.name || DEFAULT_PLAYER_NAME, score: this.run.totalScore, levels: this.run.levelIndex + 1, mode: this.mode };
     this.recording = saveScore(entry).then((scores) => { this.scores = scores; }).catch((err) => console.warn('score not saved', err));
     return this.recording;
   }
@@ -636,6 +781,23 @@ export class Game {
   autoplay() {
     const L = this.level, P = this.player;
     const laneOf = (e) => Math.round(e.mesh.position.x / LANE_WIDTH);
+    if (L.flying) {
+      // steer towards the nearest collectible ahead and fire whenever the laser is charged
+      const target = L.entities
+        .filter((e) => e.active && !e.zapped && !e.pulled && e.mesh.position.z < 0 && e.mesh.position.z > -40)
+        .sort((a, b) => b.mesh.position.z - a.mesh.position.z)[0];
+      if (target) {
+        P.lane = THREE.MathUtils.clamp(laneOf(target), -1, 1);
+        const wantY = target.mesh.position.y - 1.0;
+        this.input.upHeld = wantY > P.y + 0.3;
+        this.input.duckHeld = wantY < P.y - 0.3;
+      } else {
+        this.input.upHeld = false;
+        this.input.duckHeld = false;
+      }
+      if (L.laserCharge >= 1 && !this.debug.noLaser) this.fireLaser();
+      return;
+    }
     const ahead = L.entities.filter((e) => e.active && e.mesh.position.z < 1.2 && e.mesh.position.z > -14);
     const inLane = (lane) => ahead.filter((e) => laneOf(e) === lane);
     const blocking = (lane) => inLane(lane).some((e) => e.type === 'cloud');

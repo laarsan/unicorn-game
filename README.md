@@ -2,7 +2,8 @@
 
 Ett enhörningsspel för barn som ska lära sig tangentbord och mus. 25 banor,
 en animerad enhörning, regnbågar, glitter, fyrverkerier, flygande enhörningar
-i himlen och spindelvänner som hejar vid mål.
+i himlen och spindelvänner som hejar vid mål. Två spelsätt: galoppera på
+regnbågen eller flyga i himlen med regnbågslaser i hornet.
 All grafik och allt ljud genereras av koden – inga nedladdade tillgångar.
 
 ## Starta spelet
@@ -26,13 +27,34 @@ node server.js --no-browser
 | Byt fil | `A` / `D` eller `←` / `→` | |
 | Hoppa | `W`, `↑` eller `Mellanslag` | |
 | Ducka | `S` eller `↓` (håll inne) | |
+| Flyg upp / ner (flygläge) | `W` / `↑` respektive `S` / `↓` (håll inne) | |
+| Regnbågslaser (flygläge) | `E` | |
 | Poppa bubbla | | Vänsterklick på bubblan |
 | Extra liv | Spring på hjärtat 💖 | |
 | Starta / Nästa bana | `Enter` | Klick på knappen |
 | Paus | `Esc` | Klick på ⏸ |
 | Ljud av/på | `M` | Klick på 🔊 |
 
-Handkontroll (Xbox-typ) fungerar också: vänster spak/styrkors, `A` hoppa, `B` ducka.
+Handkontroll (Xbox-typ) fungerar också: vänster spak/styrkors, `A` hoppa
+(flyg upp), `B` ducka (flyg ner), `X` regnbågslaser.
+
+## Spelsätt
+
+Välj i menyn – valet kommer ihåg till nästa gång:
+
+- **🌈 Galoppera på regnbågen** – det vanliga spelet: hoppa över stenar och
+  staket, ducka under bågar, byt fil förbi sura moln.
+- **☁️ Flyga i himlen** – enhörningen fäller ut vingarna och flyger. `W`/`↑`
+  stiger, `S`/`↓` sjunker, `A`/`D` byter fil. Inga hinder alls: himlen är
+  full av stjärnor, kristaller, bubblor, hjärtan och **godisbitar** (+15), och
+  allt som kommer i närheten dras in till enhörningen av sig självt – man
+  behöver inte träffa sakerna. Hornet laddar en **regnbågslaser**: mätaren
+  nere till vänster fylls var femtonde procent av banan, och när den lyser
+  *REDO!* skjuter `E` ner allt som syns framför enhörningen, med poäng och ljud
+  som om varje sak hade fångats.
+
+Banor och sparad bana är gemensamma för båda spelsätten. På topplistan har en
+omgång som flögs ett ☁️ före banan.
 
 ## Banor
 
@@ -58,7 +80,7 @@ Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sj
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
 Vid mål dansar enhörningen medan fyrverkerierna går och publiken hoppar.
 Målkortet ger 1–3 stjärnor efter hur stor del av banans stjärnor som togs:
-minst hälften ger tre, minst en femtedel ger två (`STAR_RATING` i
+minst 35 % ger tre, minst 12 % ger två (`STAR_RATING` i
 `public/js/config.js`).
 Topplistan (`data/scores.json`) uppdateras efter varje klarad bana: en rad per
 spelare med bästa poäng och hur långt den omgången kom (`bana 7`, eller
@@ -92,12 +114,12 @@ Koden ligger i `public/js/`:
 | Fil | Innehåll |
 |---|---|
 | `game.js` | Tillståndsmaskin, spelloop, kollisioner, kamera |
-| `levels.js` | Bandata och den deterministiska bangeneratorn |
-| `unicorn.js` | Enhörningen (modell + animation) |
+| `levels.js` | Bandata, den deterministiska bangeneratorn och flygbanorna |
+| `unicorn.js` | Enhörningen (modell + animation, vingar i flygläget) |
 | `world.js` | Himmel, väg, moln, flygande enhörningar, dekorationer per tema |
-| `entities.js` | Stjärnor, kristaller, bubblor, hinder |
+| `entities.js` | Stjärnor, kristaller, bubblor, godis, hinder |
 | `friends.js` | Målport, publiken och spindelvännerna |
-| `effects.js` | Glitter, konfetti |
+| `effects.js` | Glitter, konfetti, fyrverkerier, regnbågslasern |
 | `audio.js` | Ljudsyntes och musiksekvenser |
 | `ui.js` | Menyer och HUD (DOM) |
 | `input.js` | Tangentbord, mus, handkontroll |
@@ -105,7 +127,9 @@ Koden ligger i `public/js/`:
 | `scoreboard.js` | Topplistans regler (en rad per spelare, bästa poäng, delas med servern) och stjärnbetyget |
 | `cursor.js` | Enhörningshornet som muspekare + glittersläp |
 
-Test-hook: `window.__game.debug.autoplay = true` låter en enkel bot spela banan.
+Test-hook: `window.__game.debug.autoplay = true` låter en enkel bot spela banan
+(i flygläget styr den mot närmaste sak och skjuter så fort mätaren är full;
+`debug.noLaser = true` stänger av skjutandet).
 
 ## Licens
 

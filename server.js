@@ -74,7 +74,9 @@ export function sanitizeScore(input) {
   if (!Number.isFinite(score) || score < 0) return null;
   const name = String(input.name ?? '').trim().slice(0, MAX_NAME_LENGTH) || 'Enhörningsvän';
   const levels = Math.max(0, Math.min(99, Math.floor(Number(input.levels ?? 0)) || 0));
-  return { name, score, levels, date: localDate() };
+  // `mode` marks a run flown in flight mode ('fly'); anything else is a gallop.
+  const mode = input.mode === 'fly' ? 'fly' : 'run';
+  return { name, score, levels, mode, date: localDate() };
 }
 
 function localDate() {
