@@ -3,8 +3,9 @@
 // opened as a plain file or from a browser that can't reach the API.
 
 import { STORAGE_KEYS, LEGACY_STORAGE_KEYS } from './config.js';
+import { upsertScore, normaliseName } from './scoreboard.js';
 
-const MAX_SCORES = 10;
+export { normaliseName };
 
 function readLocal(key, fallback) {
   try {
@@ -54,9 +55,7 @@ export async function saveScore(entry) {
   const local = readLocal(STORAGE_KEYS.scores, []);
   const d = new Date();
   const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const merged = [...local, { ...entry, date }]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_SCORES);
+  const merged = upsertScore(local, { ...entry, date });
   writeLocal(STORAGE_KEYS.scores, merged);
   try {
     const res = await fetch('/api/scores', {
@@ -78,10 +77,6 @@ export async function saveScore(entry) {
 // she continues on level 4. Names are matched case-insensitively ("zelda" ==
 // "Zelda"); the most recent spelling is what the menu shows.
 export const DEFAULT_PLAYER_NAME = 'Enhörningsvän';
-
-export function normaliseName(name) {
-  return String(name || '').trim().toLocaleLowerCase('sv');
-}
 
 export function newPlayer(name) {
   return { name: String(name || '').trim() || DEFAULT_PLAYER_NAME, level: 1, score: 0, bestLevel: 0 };

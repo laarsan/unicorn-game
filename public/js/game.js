@@ -253,9 +253,8 @@ export class Game {
     ui.onButton('btn-next', click(() => this.nextLevel()));
     ui.onButton('btn-retry', click(() => this.startLevel(this.run.levelIndex)));
     ui.onButton('btn-retry-menu', click(() => this.showMenu()));
-    ui.onButton('btn-save-score', click(() => this.submitScore()));
+    ui.onButton('btn-show-scores', click(() => this.showHighscores()));
     ui.onButton('btn-again', click(() => this.startRun(0, 0)));
-    ui.el['finished-name'].addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.submitScore(); } });
     // Enter in the name box continues a saved adventure if there is one, otherwise starts from level 1.
     ui.el.name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.audio.unlock(); this.continueRun(); } });
   }
@@ -265,6 +264,7 @@ export class Game {
       case 'menu': this.continueRun(); break;
       case 'levelclear': this.nextLevel(); break;
       case 'retry': this.startLevel(this.run.levelIndex); break;
+      case 'finished': this.showHighscores(); break;
       case 'highscores': this.startRun(0, 0); break;
       case 'paused': this.togglePause(); break;
       default: break;
@@ -580,6 +580,7 @@ export class Game {
       this.progress.score = isLast ? 0 : this.run.totalScore;
       this.progress.bestLevel = Math.max(this.progress.bestLevel || 0, this.run.levelIndex + 1);
       this.saveProgress();
+      this.recordScore();
       this.ui.showLevelClear({ level: L.def, stars, levelScore: L.score, totalScore: this.run.totalScore, isLast });
     }
   }
@@ -612,14 +613,20 @@ export class Game {
     this.ui.showFinished(this.run.totalScore, this.run.name);
   }
 
-  async submitScore() {
+  // The top list is updated after every cleared level, so a child who stops
+  // after level 3 is on it too. `recording` lets the finish screen wait for
+  // the last save before showing the list.
+  recordScore() {
+    const entry = { name: this.run.name || DEFAULT_PLAYER_NAME, score: this.run.totalScore, levels: this.run.levelIndex + 1 };
+    this.recording = saveScore(entry).then((scores) => { this.scores = scores; }).catch((err) => console.warn('score not saved', err));
+    return this.recording;
+  }
+
+  async showHighscores() {
     if (this.state !== 'finished') return;
     this.state = 'saving';
-    const name = this.ui.finishedName || this.run.name || DEFAULT_PLAYER_NAME;
-    const entry = { name, score: this.run.totalScore, levels: LEVELS.length };
-    this.scores = await saveScore(entry);
-    const highlight = this.scores.find((s) => s.name === name && s.score === entry.score);
-    this.ui.renderScores('highscore-list', this.scores, highlight);
+    await this.recording;
+    this.ui.renderScores('highscore-list', this.scores, this.run.name);
     this.state = 'highscores';
     this.ui.showScreen('highscores');
   }

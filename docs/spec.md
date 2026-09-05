@@ -35,7 +35,7 @@ Genre: **3D lane-runner** (Subway Surfers-typ) med **avslutade banor** i ställe
 - Hinder: moln-troll, stenar, staket (kräver hopp), regnbågsbågar lågt (kräver ducka).
 - Samlarobjekt: stjärnor (på marken och i luften), bubblor (klickas med musen), kristaller.
 - Bana klarad: konfetti, fanfar, spindelvännerna jublar, 1–3 stjärnor i betyg, knappen **Nästa bana**.
-- Efter bana 5: slutskärm "Du klarade hela äventyret!", inmatning av namn, high score-lista (topp 10), **Spela igen** och **Avsluta**.
+- Efter sista banan: slutskärm "Du klarade hela äventyret!", topplista (topp 10), **Spela igen** och **Avsluta**. Namnet är det som skrevs i menyn.
 
 ## Styrning (inlärningsmål: WASD, pilar, mellanslag, mus, Enter, Esc)
 
@@ -78,7 +78,7 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 ## High score
 
 - Topp 10, sparas mellan spel i `data/scores.json` via den lokala servern. Fallback till `localStorage` om servern inte svarar.
-- Registreras efter klarat äventyr (eller när spelaren ger upp på slutskärm — nej: endast efter klarat äventyr eller efter game over-bekräftelse "Sluta spela" → poängen registreras ändå så att inget arbete går förlorat).
+- En rad per spelare (namn matchas skiftlägesokänsligt): bästa poäng och hur många banor den omgången klarat. Raden uppdateras efter **varje** klarad bana, så den som slutar efter bana 3 syns också (provspelning 5). En ny omgång från bana 1 ersätter raden först när den slår den gamla poängen.
 
 ## Start och avslut
 
@@ -160,3 +160,11 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 |---|---|---|
 | Spindelvännernas röster lät som trasiga robotar | `voice()` omskriven som parallell formantsyntes av ett svenskt "hej!": sågtand med glottal lågpasslutning genom tre bandpassformanter (E → J, barnstämband ×1,18–1,35), andningsbrus genom samma formanter så H:et blir en viskad vokal, alla tonhöjds- och formantändringar är ramper (inga steg), slumpmässig tonhöjdsdrift (jitter ±1,5 %) plus vibrato som tonas in på vokalen. Kurvan stiger (×0,9 → ×1,3) med litet släpp i slutet. Varje rop varieras i tonhöjd (±5 %) och längd (±10 %), var tredje blir "hej hej!" | offline-rendering med tonhöjdsspårning: flicka 356 → 383 → 445 → 441 Hz, pojkar 258 → 288 → 332 och 222 → 242 → 286; H-puffen hörs (rms 0,022 mot vokal 0,07–0,12); topp 0,21–0,30; max sample-hopp 0,05 (inga klick); bot bana 5: 9 rop utan träffar |
 | Bara en låt | Tre låtar i `SONGS` (audio.js): *Regnbågsgaloppen* (originalet, 4/4), *Hovarnas dans* (galopprytm lång-kort-kort, 4/4) och *Regnbågsvalsen* (3/4, oom-pah-pah). Varje låt har egen melodi, basgång, trumpattern och takt; banorna roterar låt (bana 1 → A, 2 → B, 3 → C, 4 → A …) via `musicSong` i levels.js | `tests/audio.test.mjs` (gridkonsistens, olika melodier), `tests/levels.test.mjs` (rotation, alla tre används); offline-rendering visar rytmformerna; Playwright: bana 1–4 spelar A, B, C, A utan konsolfel |
+
+## Provspelning 5 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| Topplistan visade bara den som klarat alla 25 banor | Poängen registreras efter varje klarad bana: en rad per spelare med bästa poäng och klarad bana (`bana 7`, `🏆 alla 25`). Logiken ligger i `public/js/scoreboard.js` och delas av servern (`data/scores.json`) och localStorage-fallbacken. Namnfältet på slutskärmen är borttaget (namnet skrivs redan i menyn); knappen heter **Se topplistan** | `tests/scoreboard.test.mjs`, `tests/server.test.mjs`; Playwright (`temp/pw-scores.js`): Zelda 3 banor → 1 rad, Lars 2 banor → 2 rader, Zelda om från bana 1 behåller "bana 3", Lars klarar bana 25 → "🏆 alla 25" markerad; skärmdumpar meny + slutlista |
+| Rensa historik | `data/scores.json` = `[]`, lagringsnamnrymd v2 → v3 (v2-nycklarna tas bort vid start), Edge-profilens localStorage tömd | menyn visar "Ingen har spelat än", inga spelar-chips, tomt namnfält |
+

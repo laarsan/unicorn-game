@@ -56,9 +56,10 @@ tonart och sitt eget tempo.
 
 Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
-Vid mål dansar enhörningen medan fyrverkerierna går och publiken hoppar. Efter
-bana 25 sparas poängen på topplistan (`data/scores.json`), som finns kvar
-mellan spelomgångar.
+Vid mål dansar enhörningen medan fyrverkerierna går och publiken hoppar.
+Topplistan (`data/scores.json`) uppdateras efter varje klarad bana: en rad per
+spelare med bästa poäng och hur långt den omgången kom (`bana 7`, eller
+`🏆 alla 25`). Den finns kvar mellan spelomgångar.
 
 ## Flera spelare
 
@@ -97,7 +98,8 @@ Koden ligger i `public/js/`:
 | `audio.js` | Ljudsyntes och musiksekvenser |
 | `ui.js` | Menyer och HUD (DOM) |
 | `input.js` | Tangentbord, mus, handkontroll |
-| `scores.js` | Topplista och sparad progress per spelare |
+| `scores.js` | Topplista (server + localStorage) och sparad progress per spelare |
+| `scoreboard.js` | Topplistans regler: en rad per spelare, bästa poäng, delas med servern |
 | `cursor.js` | Enhörningshornet som muspekare + glittersläp |
 
 Test-hook: `window.__game.debug.autoplay = true` låter en enkel bot spela banan.

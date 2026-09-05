@@ -2,6 +2,8 @@
 // calls these methods and subscribes to button clicks via `onButton`.
 
 import { HEARTS_PER_LEVEL } from './config.js';
+import { LEVEL_COUNT } from './levels.js';
+import { normaliseName } from './scoreboard.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,7 +13,7 @@ export class UI {
   constructor() {
     this.el = {};
     for (const id of [...SCREENS, 'hud', 'hud-hearts', 'hud-level', 'hud-score', 'hud-progress-fill', 'hud-progress-unicorn',
-      'tip', 'tip-icon', 'tip-text', 'countdown', 'wow', 'popups', 'name', 'finished-name', 'finished-score', 'menu-scores',
+      'tip', 'tip-icon', 'tip-text', 'countdown', 'wow', 'popups', 'name', 'finished-score', 'menu-scores',
       'highscore-list', 'levelclear-title', 'levelclear-stars', 'levelclear-text', 'btn-continue', 'continue-level', 'btn-mute', 'btn-vr',
       'players', 'btn-new-player']) {
       this.el[id] = $(id);
@@ -30,7 +32,6 @@ export class UI {
   showScreen(name) {
     for (const s of SCREENS) this.el[s].classList.toggle('hidden', s !== name);
     if (name === 'menu') setTimeout(() => this.el.name.focus(), 50);
-    else if (name === 'finished') setTimeout(() => { this.el['finished-name'].focus(); this.el['finished-name'].select(); }, 50);
     // Leaving a screen with a text box: give the keys back to the game.
     else if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
   }
@@ -125,16 +126,20 @@ export class UI {
     hud.classList.add('flash');
   }
 
-  renderScores(target, scores, highlight) {
+  // Every player who has cleared a level is on the list: name, how far the
+  // best run got, points. `highlightName` marks the child who just played.
+  renderScores(target, scores, highlightName) {
     const el = this.el[target];
     const heading = target === 'menu-scores' ? '<h3>🏆 Topplistan</h3>' : '';
     if (!scores.length) {
       el.innerHTML = `${heading}<p class="empty">Ingen har spelat än – bli först!</p>`;
       return;
     }
+    const key = normaliseName(highlightName);
     const rows = scores.map((s, i) => {
-      const me = highlight && s.name === highlight.name && s.score === highlight.score && s.date === highlight.date;
-      return `<li class="${me ? 'me' : ''}"><span class="rank">${i + 1}.</span><span class="name">${escapeHtml(s.name)}</span><span class="points">${s.score} ⭐</span></li>`;
+      const me = key && normaliseName(s.name) === key;
+      return `<li class="${me ? 'me' : ''}"><span class="rank">${i + 1}.</span><span class="name">${escapeHtml(s.name)}</span>` +
+        `<span class="level">${describeLevels(s.levels)}</span><span class="points">${s.score} ⭐</span></li>`;
     });
     el.innerHTML = `${heading}<ol>${rows.join('')}</ol>`;
   }
@@ -148,8 +153,7 @@ export class UI {
   }
 
   showFinished(totalScore, name) {
-    this.el['finished-score'].textContent = `Du fick ${totalScore} poäng! 🦄🌈`;
-    this.el['finished-name'].value = name;
+    this.el['finished-score'].textContent = `${name} fick ${totalScore} poäng! 🦄🌈`;
     this.showScreen('finished');
   }
 
@@ -205,10 +209,13 @@ export class UI {
   set playerName(v) {
     this.el.name.value = v;
   }
+}
 
-  get finishedName() {
-    return this.el['finished-name'].value.trim();
-  }
+// "bana 7" for a run that cleared seven levels, a trophy once all are done.
+function describeLevels(levels) {
+  const n = Number(levels) || 0;
+  if (n >= LEVEL_COUNT) return `🏆 alla ${LEVEL_COUNT}`;
+  return n > 0 ? `bana ${n}` : '';
 }
 
 function escapeHtml(s) {

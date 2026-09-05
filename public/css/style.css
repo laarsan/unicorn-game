@@ -217,7 +217,7 @@ kbd {
 .scores ol { list-style: none; padding: 0; margin: 0; }
 .scores li {
   display: grid;
-  grid-template-columns: 2.2em 1fr auto;
+  grid-template-columns: 2.2em 1fr auto auto;
   gap: 0.6em;
   padding: 0.15em 0.6em;
   border-radius: 12px;
@@ -226,6 +226,7 @@ kbd {
 .scores li:nth-child(odd) { background: rgba(155, 123, 255, 0.12); }
 .scores li.me { background: linear-gradient(90deg, #ffd23f, #ff9f43); color: #5a2d0c; font-weight: bold; animation: glow 1s ease-in-out infinite alternate; }
 .scores li .rank { text-align: center; }
+.scores li .level { opacity: 0.75; font-size: 0.85em; align-self: center; white-space: nowrap; }
 .scores li .points { font-weight: bold; }
 .scores .empty { opacity: 0.7; }
 

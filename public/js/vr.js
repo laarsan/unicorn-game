@@ -89,8 +89,6 @@ export class VRSupport {
     g.audio.unlock();
     if (g.state === 'playing') {
       if (!this.popBubble(controller)) g.jump();
-    } else if (g.state === 'finished') {
-      g.submitScore();
     } else {
       g.confirm();
     }

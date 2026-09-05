@@ -10,6 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn, execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { upsertScore } from './public/js/scoreboard.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -20,7 +21,6 @@ const CERT_DIR = path.join(ROOT, 'cert');
 
 const HTTP_PORT = Number(process.env.PORT || 8765);
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 8443);
-const MAX_SCORES = 10;
 const MAX_NAME_LENGTH = 20;
 const QUIT_GRACE_MS = 400; // let the quit response reach the browser first
 const OPEN_BROWSER = !process.argv.includes('--no-browser');
@@ -82,10 +82,10 @@ function localDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// One row per player: a new entry replaces that player's row only when it is
+// better (see scoreboard.js), so a fresh run from level 1 keeps the old best.
 export function mergeScores(existing, entry) {
-  return [...existing, entry]
-    .sort((a, b) => b.score - a.score || (a.date < b.date ? -1 : 1))
-    .slice(0, MAX_SCORES);
+  return upsertScore(existing, entry);
 }
 
 function writeScores(scores) {

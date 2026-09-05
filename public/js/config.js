@@ -45,12 +45,15 @@ export const OBJECT = {
 // Storage namespace. Bumping the version gives every browser a fresh start
 // (progress, local top list); the old keys are removed on boot.
 export const STORAGE_KEYS = {
-  progress: 'regnbagsgaloppen.v2.progress',   // pre-player-switch shape, migrated into `players` on boot
-  players: 'regnbagsgaloppen.v2.players',
-  scores: 'regnbagsgaloppen.v2.scores',
-  settings: 'regnbagsgaloppen.v2.settings',
+  progress: 'regnbagsgaloppen.v3.progress',   // pre-player-switch shape, migrated into `players` on boot
+  players: 'regnbagsgaloppen.v3.players',
+  scores: 'regnbagsgaloppen.v3.scores',
+  settings: 'regnbagsgaloppen.v3.settings',
 };
-export const LEGACY_STORAGE_KEYS = ['regnbagsgaloppen.progress', 'regnbagsgaloppen.scores', 'regnbagsgaloppen.settings'];
+export const LEGACY_STORAGE_KEYS = [
+  'regnbagsgaloppen.progress', 'regnbagsgaloppen.scores', 'regnbagsgaloppen.settings',
+  'regnbagsgaloppen.v2.progress', 'regnbagsgaloppen.v2.players', 'regnbagsgaloppen.v2.scores', 'regnbagsgaloppen.v2.settings',
+];
 
 export const PALETTE = {
   rainbow: [0xff5d8f, 0xff9f43, 0xffe066, 0x7bed9f, 0x70c1ff, 0x9b7bff, 0xff8ad8],
