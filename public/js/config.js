@@ -40,6 +40,9 @@ export const FLIGHT = {
   laserBeamSeconds: 0.75,   // how long the beam is drawn
   laserRippleSeconds: 0.04, // the shot collects its targets one by one, nearest first, this far apart
   laserReach: 2,            // z (behind the horn) a target may still be at when the beam fires
+  laserRange: 70,           // how far ahead (units) the beam strikes – half the spawn distance, so a shot never empties
+                            // the whole sky (play-test 8: full range made the flight feel like nothing was left to do)
+  laserSpread: 0.45,        // beam cone: radius growth per unit of length (play-test 8: 0.3 was too thin to notice)
 };
 export const LASER_KEY = 'E';  // next to W and D, so a small hand reaches it without moving
 

@@ -1,5 +1,6 @@
-// Keyboard + mouse input, normalised into game actions. Gamepads (and later
-// VR controllers) feed the same action names so the game never sees devices.
+// Keyboard + mouse input, normalised into game actions. Gamepads and the VR
+// controllers (vr.js) feed the same action names and held-state flags so the
+// game never sees devices.
 
 export class Input {
   constructor(canvas) {
@@ -11,6 +12,7 @@ export class Input {
     this.pointer = { x: 0, y: 0, clicked: false };
     this.enabled = true;
     this.gamepadState = { axisX: 0, jump: false, duck: false };
+    this.xr = { climb: false, duck: false };   // held VR buttons, written by VRSupport every frame
     this.bind();
   }
 
@@ -80,12 +82,12 @@ export class Input {
   }
 
   get ducking() {
-    return this.duckHeld || this.gamepadState.duck;
+    return this.duckHeld || this.gamepadState.duck || this.xr.duck;
   }
 
   // Flight mode: the jump keys climb for as long as they are held.
   get climbing() {
-    return this.upHeld || this.gamepadState.jump;
+    return this.upHeld || this.gamepadState.jump || this.xr.climb;
   }
 }
 

@@ -3,7 +3,7 @@
 // mode. Cheap CPU-updated buffers – a couple of thousand particles at most.
 
 import * as THREE from '../vendor/three.module.js';
-import { PALETTE } from './config.js';
+import { PALETTE, FLIGHT } from './config.js';
 
 function makeSparkleTexture() {
   const c = document.createElement('canvas');
@@ -39,11 +39,14 @@ function makeRainbowTexture() {
   return tex;
 }
 
-const BEAM_LENGTH = 150;
-const BEAM_FAR_RADIUS = 45;        // seen from behind, a narrower cone shrinks to a thin ring on screen
+// The beam is drawn exactly as far as it strikes (FLIGHT.laserRange) and its
+// cone opens with FLIGHT.laserSpread – seen from behind, a narrow cone shrinks
+// to a thin ring on screen, so the spread is generous.
+const BEAM_LENGTH = FLIGHT.laserRange;
+const BEAM_FAR_RADIUS = BEAM_LENGTH * FLIGHT.laserSpread;
 const BEAM_NEAR_RADIUS = 1.2;
-const RING_SPEED = 230;            // units / s the rainbow hoops race away from the horn
-const RING_GAP = 14;
+const RING_SPEED = 115;            // units / s the rainbow hoops race away from the horn (the last one reaches the end as the beam fades)
+const RING_GAP = 7;
 
 // The rainbow laser: a wide rainbow-striped tunnel from the horn straight
 // ahead, with seven rainbow hoops racing down it and a bright flash at the

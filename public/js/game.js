@@ -331,9 +331,10 @@ export class Game {
     return this.unicorn.horn.localToWorld(this.beamOrigin);
   }
 
-  // Every collectible ahead of the horn is struck, nearest first, a few
-  // hundredths apart so the sky empties in a ripple and every pickup still
-  // gets its own sound, glitter and points – exactly as if it had been caught.
+  // Every collectible within FLIGHT.laserRange ahead of the horn is struck,
+  // nearest first, a few hundredths apart so the sky empties in a ripple and
+  // every pickup still gets its own sound, glitter and points – exactly as if
+  // it had been caught. Anything farther away is left for the next shot.
   fireLaser() {
     if (this.state !== 'playing' || !this.level || !this.level.flying) return;
     const L = this.level;
@@ -350,7 +351,7 @@ export class Game {
     this.effects.fireBeam(this.hornPosition(), FLIGHT.laserBeamSeconds);
     this.shake = LASER_SHAKE;
     const targets = L.entities
-      .filter((e) => e.active && !e.isObstacle && !e.zapped && e.mesh.position.z < FLIGHT.laserReach)
+      .filter((e) => e.active && !e.isObstacle && !e.zapped && e.mesh.position.z < FLIGHT.laserReach && e.mesh.position.z > -FLIGHT.laserRange)
       .sort((a, b) => b.mesh.position.z - a.mesh.position.z);
     targets.forEach((e, i) => {
       e.zapped = true;

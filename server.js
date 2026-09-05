@@ -270,9 +270,14 @@ if (isMain) {
       key: fs.readFileSync(path.join(CERT_DIR, 'key.pem')),
       cert: fs.readFileSync(path.join(CERT_DIR, 'cert.pem')),
     };
-    https.createServer(options, handle).listen(HTTPS_PORT, () => {
+    const secure = https.createServer(options, handle);
+    secure.listen(HTTPS_PORT, () => {
       for (const ip of lanAddresses()) log(`VR (Quest-webbläsaren): https://${ip}:${HTTPS_PORT}`);
     });
+    // VR is optional: a busy port or a bad certificate must not take the game down.
+    secure.on('error', (err) => log(`https server error (VR unavailable): ${err.message}`));
+  } else {
+    log('VR: no certificate in cert/ – run setup/New-DevCert.ps1 once to enable https for the Quest browser');
   }
 
   process.on('SIGINT', shutdown);

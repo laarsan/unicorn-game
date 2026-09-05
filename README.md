@@ -36,7 +36,8 @@ node server.js --no-browser
 | Ljud av/på | `M` | Klick på 🔊 |
 
 Handkontroll (Xbox-typ) fungerar också: vänster spak/styrkors, `A` hoppa
-(flyg upp), `B` ducka (flyg ner), `X` regnbågslaser.
+(flyg upp), `B` ducka (flyg ner), `X` regnbågslaser. VR-kontrollerna för
+Quest 3 står i `docs/vr.md`.
 
 ## Spelsätt
 
@@ -50,8 +51,9 @@ Välj i menyn – valet kommer ihåg till nästa gång:
   allt som kommer i närheten dras in till enhörningen av sig självt – man
   behöver inte träffa sakerna. Hornet laddar en **regnbågslaser**: mätaren
   nere till vänster fylls var femtonde procent av banan, och när den lyser
-  *REDO!* skjuter `E` ner allt som syns framför enhörningen, med poäng och ljud
-  som om varje sak hade fångats.
+  *REDO!* skjuter `E` ner allt inom laserns räckvidd framför enhörningen
+  (halva vägen till horisonten, `FLIGHT.laserRange`), med poäng och ljud som om
+  varje sak hade fångats. Det som är längre bort får vänta på nästa skott.
 
 Banor och sparad bana är gemensamma för båda spelsätten. På topplistan har en
 omgång som flögs ett ☁️ före banan.
@@ -98,9 +100,11 @@ Vill du börja om helt (tom topplista, inga sparade spelare): töm
 
 ## VR (Meta Quest 3)
 
-Se `docs/vr.md`. Kort: kör `setup/New-DevCert.ps1` en gång, starta spelet, öppna
-`https://<datorns-IP>:8443` i Quest-webbläsaren och tryck **VR**. Ingen
-publicering eller app-butik behövs.
+Se `docs/vr.md`. Kort: kör `setup/New-DevCert.ps1` en gång, starta spelet,
+öppna adressen som PC-menyn visar längst ner (`https://<datorns-IP>:8443`) i
+Quest-webbläsaren och tryck **VR**. Båda spelsätten fungerar i VR med
+handkontrollerna, och menyer, HUD och tips svävar framför dig i headsetet.
+Ingen publicering eller app-butik behövs.
 
 ## Utveckling
 
@@ -123,6 +127,7 @@ Koden ligger i `public/js/`:
 | `audio.js` | Ljudsyntes och musiksekvenser |
 | `ui.js` | Menyer och HUD (DOM) |
 | `input.js` | Tangentbord, mus, handkontroll |
+| `vr.js` | WebXR: VR-knapp, Quest-kontroller, svävande meny- och HUD-paneler |
 | `scores.js` | Topplista (server + localStorage) och sparad progress per spelare |
 | `scoreboard.js` | Topplistans regler (en rad per spelare, bästa poäng, delas med servern) och stjärnbetyget |
 | `cursor.js` | Enhörningshornet som muspekare + glittersläp |
