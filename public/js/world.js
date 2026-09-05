@@ -7,6 +7,8 @@ import { makeRng } from './levels.js';
 
 const DECOR_COUNT = 34;
 const CLOUD_COUNT = 14;
+const SKY_UNICORN_COUNT = 5;
+const SKY_UNICORN_WRAP_X = 150;   // leave the sky on one side, come back on the other
 const RECYCLE_Z = 30;
 
 function makeRoadTexture() {
@@ -87,6 +89,83 @@ function makeCloud(rng, scale = 1) {
     m.scale.setScalar(r);
     g.add(m);
   }
+  return g;
+}
+
+// ----- flying unicorns high in the sky -----
+// A simplified winged cousin of the player's unicorn, built from the shared
+// sphere geometry: torso, neck, head, horn, rainbow mane and tail, tucked legs
+// and two three-feather wings that flap. Faces -z like the player; the group
+// is yawed to face its direction of travel.
+const skyBodyMat = new THREE.MeshLambertMaterial({ color: PALETTE.unicornBody, emissive: 0xffe4f0, emissiveIntensity: 0.3 });
+const skyHornMat = new THREE.MeshLambertMaterial({ color: PALETTE.horn, emissive: 0xffb300, emissiveIntensity: 0.4 });
+const skyWingMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xfff3fa, emissiveIntensity: 0.4 });
+const skyManeMats = PALETTE.rainbow.map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.3 }));
+const skyLegGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.6, 8);
+
+function makeSkyUnicorn(rng) {
+  const g = new THREE.Group();
+  const body = new THREE.Group();
+  g.add(body);
+  const blob = (mat, r, x, y, z, sx = 1, sy = 1, sz = 1) => {
+    const m = new THREE.Mesh(cloudGeo, mat);
+    m.position.set(x, y, z);
+    m.scale.set(r * sx, r * sy, r * sz);
+    body.add(m);
+    return m;
+  };
+  blob(skyBodyMat, 0.62, 0, 0, 0.05, 1, 0.85, 1.35);                 // torso
+  const neck = blob(skyBodyMat, 0.34, 0, 0.4, -0.55, 1, 1.2, 1);
+  neck.rotation.x = 0.5;
+  blob(skyBodyMat, 0.4, 0, 0.8, -0.8, 1, 0.95, 1);                   // head
+  blob(skyBodyMat, 0.28, 0, 0.68, -1.12, 1, 0.8, 1);                 // snout
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 8), skyBodyMat);
+    ear.position.set(side * 0.24, 1.2, -0.75);
+    ear.rotation.z = side * -0.35;
+    body.add(ear);
+  }
+  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.55, 8), skyHornMat);
+  horn.position.set(0, 1.4, -0.95);
+  horn.rotation.x = -0.35;
+  body.add(horn);
+  for (let i = 0; i < 6; i++) {                                     // mane down the neck
+    const t = i / 5;
+    blob(skyManeMats[i % skyManeMats.length], 0.2 - t * 0.05, 0.12 - t * 0.05, 1.3 - t * 0.85, -0.78 + t * 0.75);
+  }
+  const tail = [];
+  for (let i = 0; i < 6; i++) {                                     // tail streaming behind
+    const t = i / 5;
+    const s = blob(skyManeMats[i % skyManeMats.length], 0.17 - t * 0.05, 0, 0.3 + Math.sin(t * 2.4) * 0.35, 0.8 + t * 1.0);
+    s.userData.base = s.position.clone();
+    tail.push(s);
+  }
+  for (const [x, z] of [[-0.3, -0.45], [0.3, -0.45], [-0.3, 0.5], [0.3, 0.5]]) {  // legs tucked in flight
+    const leg = new THREE.Mesh(skyLegGeo, skyBodyMat);
+    leg.position.set(x, -0.55, z);
+    leg.rotation.x = z < 0 ? -0.8 : 0.7;
+    body.add(leg);
+  }
+  const wings = [];
+  for (const side of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.4, 0.35, -0.1);
+    for (let i = 0; i < 3; i++) {                                   // three overlapping feathers
+      const f = new THREE.Mesh(cloudGeo, skyWingMat);
+      f.position.set(side * (0.6 + i * 0.6), i * 0.1, 0.05 + i * 0.12);
+      f.scale.set(0.75, 0.12, 0.45 - i * 0.06);
+      f.rotation.y = side * i * 0.22;
+      pivot.add(f);
+    }
+    pivot.userData.side = side;
+    body.add(pivot);
+    wings.push(pivot);
+  }
+  g.userData = {
+    body, wings, tail,
+    flap: rng() * Math.PI * 2, flapHz: 1.6 + rng() * 0.8,
+    bobPhase: rng() * Math.PI * 2, bobHz: 0.5 + rng() * 0.4,
+  };
   return g;
 }
 
@@ -204,6 +283,7 @@ export class World {
     scene.add(this.root);
     this.decor = [];
     this.clouds = [];
+    this.skyUnicorns = [];
     this.buildStatic();
   }
 
@@ -281,6 +361,14 @@ export class World {
       this.root.add(c);
     }
 
+    // flying unicorns crossing the sky, spread out so they never bunch up
+    for (let i = 0; i < SKY_UNICORN_COUNT; i++) {
+      const u = makeSkyUnicorn(this.rng);
+      this.launchSkyUnicorn(u, this.rng, (i / SKY_UNICORN_COUNT) * 2 - 1);
+      this.skyUnicorns.push(u);
+      this.root.add(u);
+    }
+
     // lights
     this.hemi = new THREE.HemisphereLight(0xffffff, 0xb8e0a0, 1.1);
     this.dir = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -326,7 +414,34 @@ export class World {
     d.rotation.y = rng() * Math.PI * 2;
   }
 
+  // Give a sky unicorn a fresh flight path. xFraction (−1…1) places it along
+  // its path; a new path starts just outside the sky on the side it came from.
+  launchSkyUnicorn(u, rng, xFraction = null) {
+    const d = u.userData;
+    d.dir = rng() < 0.5 ? -1 : 1;
+    d.speed = 5 + rng() * 5;
+    d.baseY = 7 + rng() * 9;
+    u.position.set((xFraction ?? -d.dir) * SKY_UNICORN_WRAP_X, d.baseY, -60 - rng() * 70);
+    u.rotation.y = d.dir > 0 ? -Math.PI / 2 : Math.PI / 2;     // local -z (the face) points along dir
+    u.scale.setScalar(3 + rng() * 1.5);
+  }
+
   update(dt, speed, t) {
+    for (const u of this.skyUnicorns) {
+      const d = u.userData;
+      u.position.x += d.dir * d.speed * dt;
+      if (Math.abs(u.position.x) > SKY_UNICORN_WRAP_X) this.launchSkyUnicorn(u, this.rng);
+      u.position.y = d.baseY + Math.sin(t * d.bobHz + d.bobPhase) * 1.2;
+      d.flap += dt * d.flapHz * Math.PI * 2;
+      const lift = 0.15 + Math.sin(d.flap) * 0.6;
+      for (const w of d.wings) w.rotation.z = w.userData.side * lift;
+      d.body.rotation.x = -0.12 + Math.sin(d.flap) * 0.08;      // gentle pitch with each beat
+      d.body.rotation.z = Math.sin(t * d.bobHz + d.bobPhase) * 0.1;
+      d.tail.forEach((s, i) => {
+        const k = i / 5, b = s.userData.base;
+        s.position.set(b.x, b.y + Math.sin(t * 6 + k * 3) * 0.15 * k, b.z + k * 0.2);
+      });
+    }
     // The plane's +v runs away from the camera, so the sparkles and lane dashes
     // must scroll towards +v-offset to come *at* the player like everything else.
     this.roadTex.offset.y += (speed * dt) / 12;

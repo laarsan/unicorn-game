@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { upsertScore, isBetterScore, MAX_SCORES } from '../public/js/scoreboard.js';
+import { upsertScore, isBetterScore, starRating, MAX_SCORES } from '../public/js/scoreboard.js';
+import { STAR_RATING } from '../public/js/config.js';
 
 const row = (name, score, levels, date = '2026-09-05') => ({ name, score, levels, date });
 
@@ -41,4 +42,13 @@ test('the list is capped at MAX_SCORES distinct players', () => {
   assert.equal(list.length, MAX_SCORES);
   assert.equal(list[0].score, (MAX_SCORES + 3) * 100);
   assert.ok(!list.some((s) => s.score === 100));
+});
+
+test('star rating is generous: half the stars gives three, a fifth gives two', () => {
+  assert.equal(starRating(10, 20), 3);
+  assert.equal(starRating(4, 20), 2);
+  assert.equal(starRating(3, 20), 1);
+  assert.equal(starRating(0, 20), 1);
+  assert.equal(starRating(0, 0), 3, 'a level without stars is always three');
+  assert.ok(STAR_RATING.three <= 0.5 && STAR_RATING.two <= 0.2, 'thresholds must stay at or below play-test 6 values');
 });

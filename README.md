@@ -1,8 +1,8 @@
 # Regnbågsgaloppen 🦄🌈
 
 Ett enhörningsspel för barn som ska lära sig tangentbord och mus. 25 banor,
-en animerad enhörning, regnbågar, glitter, fyrverkerier och spindelvänner som
-hejar vid mål.
+en animerad enhörning, regnbågar, glitter, fyrverkerier, flygande enhörningar
+i himlen och spindelvänner som hejar vid mål.
 All grafik och allt ljud genereras av koden – inga nedladdade tillgångar.
 
 ## Starta spelet
@@ -57,6 +57,9 @@ tonart och sitt eget tempo.
 Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
 Vid mål dansar enhörningen medan fyrverkerierna går och publiken hoppar.
+Målkortet ger 1–3 stjärnor efter hur stor del av banans stjärnor som togs:
+minst hälften ger tre, minst en femtedel ger två (`STAR_RATING` i
+`public/js/config.js`).
 Topplistan (`data/scores.json`) uppdateras efter varje klarad bana: en rad per
 spelare med bästa poäng och hur långt den omgången kom (`bana 7`, eller
 `🏆 alla 25`). Den finns kvar mellan spelomgångar.
@@ -91,7 +94,7 @@ Koden ligger i `public/js/`:
 | `game.js` | Tillståndsmaskin, spelloop, kollisioner, kamera |
 | `levels.js` | Bandata och den deterministiska bangeneratorn |
 | `unicorn.js` | Enhörningen (modell + animation) |
-| `world.js` | Himmel, väg, moln, dekorationer per tema |
+| `world.js` | Himmel, väg, moln, flygande enhörningar, dekorationer per tema |
 | `entities.js` | Stjärnor, kristaller, bubblor, hinder |
 | `friends.js` | Målport, publiken och spindelvännerna |
 | `effects.js` | Glitter, konfetti |
@@ -99,7 +102,7 @@ Koden ligger i `public/js/`:
 | `ui.js` | Menyer och HUD (DOM) |
 | `input.js` | Tangentbord, mus, handkontroll |
 | `scores.js` | Topplista (server + localStorage) och sparad progress per spelare |
-| `scoreboard.js` | Topplistans regler: en rad per spelare, bästa poäng, delas med servern |
+| `scoreboard.js` | Topplistans regler (en rad per spelare, bästa poäng, delas med servern) och stjärnbetyget |
 | `cursor.js` | Enhörningshornet som muspekare + glittersläp |
 
 Test-hook: `window.__game.debug.autoplay = true` låter en enkel bot spela banan.

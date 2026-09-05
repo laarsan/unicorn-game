@@ -3,7 +3,16 @@
 // cleared. Pure functions shared by the server (data/scores.json) and the
 // browser's localStorage fallback so both keep the list the same way.
 
+import { STAR_RATING } from './config.js';
+
 export const MAX_SCORES = 10;
+
+// 1–3 stars for a cleared level from the share of its stars that were
+// collected. A level without stars is always three.
+export function starRating(got, total) {
+  const ratio = total ? got / total : 1;
+  return ratio >= STAR_RATING.three ? 3 : ratio >= STAR_RATING.two ? 2 : 1;
+}
 
 export function normaliseName(name) {
   return String(name || '').trim().toLocaleLowerCase('sv');

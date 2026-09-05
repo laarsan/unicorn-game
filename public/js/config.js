@@ -20,6 +20,11 @@ export const HEARTS_PER_LEVEL = 5;
 export const MAX_HEARTS = 7;            // hearts caught on the course can add extra lives up to this
 export const SPEED_RAMP_SECONDS = 1.6;  // ease-in at level start
 
+// Star rating on the level-clear card: share of the level's stars collected.
+// Deliberately generous – a seven-year-old should see two or three stars on
+// most runs (play-test 6: 0.8 / 0.45 made three stars nearly unreachable).
+export const STAR_RATING = { three: 0.5, two: 0.2 };
+
 export const POINTS = {
   star: 10,
   bubble: 25,

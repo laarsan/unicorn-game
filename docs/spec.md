@@ -168,3 +168,11 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 | Topplistan visade bara den som klarat alla 25 banor | Poängen registreras efter varje klarad bana: en rad per spelare med bästa poäng och klarad bana (`bana 7`, `🏆 alla 25`). Logiken ligger i `public/js/scoreboard.js` och delas av servern (`data/scores.json`) och localStorage-fallbacken. Namnfältet på slutskärmen är borttaget (namnet skrivs redan i menyn); knappen heter **Se topplistan** | `tests/scoreboard.test.mjs`, `tests/server.test.mjs`; Playwright (`temp/pw-scores.js`): Zelda 3 banor → 1 rad, Lars 2 banor → 2 rader, Zelda om från bana 1 behåller "bana 3", Lars klarar bana 25 → "🏆 alla 25" markerad; skärmdumpar meny + slutlista |
 | Rensa historik | `data/scores.json` = `[]`, lagringsnamnrymd v2 → v3 (v2-nycklarna tas bort vid start), Edge-profilens localStorage tömd | menyn visar "Ingen har spelat än", inga spelar-chips, tomt namnfält |
 
+
+## Provspelning 6 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| För svårt att få 2 och 3 stjärnor på målkortet | Gränserna sänkta från 80 % / 45 % av banans stjärnor till 50 % / 20 % (`STAR_RATING` i config.js, `starRating()` i scoreboard.js). En bana utan stjärnor ger alltid tre | `tests/scoreboard.test.mjs`; Playwright (`temp/pw-stars.js`): 46/91 → 3 stjärnor, 19/91 → 2, 10/91 → 1 |
+| Flygande enhörningar i himlen | Fem bevingade enhörningar (kropp, horn, regnbågsman och -svans, indragna ben, tre-fjädriga vingar som flaxar) korsar himlen i bakgrunden på höjd 7–16, 60–130 enheter bort, i olika riktning, fart och storlek; guppar och lutar sig lätt, dyker upp igen från motsatt sida | Playwright (`temp/pw-sky.js`): 3–4 av 5 inom kamerans bild i meny, bana 1 och natt; skärmdumpar `shot-sky-level1.png`, `shot-sky-closeup.png` |
+| Rensa historik | `data/scores.json` = `[]`, Edge-profilens localStorage tömd (namnrymd v3 oförändrad) | menyn visar "Ingen har spelat än" |

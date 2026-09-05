@@ -18,6 +18,7 @@ import {
   loadSettings, saveSettings, requestQuit, forgetLegacyStorage,
 } from './scores.js';
 import { VRSupport } from './vr.js';
+import { starRating } from './scoreboard.js';
 
 const CAMERA_POS = new THREE.Vector3(0, 4.3, 8.6);
 const CAMERA_LOOK = new THREE.Vector3(0, 1.6, -7);
@@ -572,8 +573,7 @@ export class Game {
     if (L.finishing >= LEVEL_CLEAR_OVERLAY_DELAY && this.state === 'levelclear-anim') {
       this.state = 'levelclear';
       this.ui.hideWow();
-      const ratio = L.starsTotal ? L.starsGot / L.starsTotal : 1;
-      const stars = ratio >= 0.8 ? 3 : ratio >= 0.45 ? 2 : 1;
+      const stars = starRating(L.starsGot, L.starsTotal);
       this.run.totalScore += L.score;
       const isLast = this.run.levelIndex === LEVELS.length - 1;
       this.progress.level = isLast ? 1 : this.run.levelIndex + 2;
