@@ -2,6 +2,8 @@
 // A level is data: theme colours, speed, length and a weighted set of
 // "chunks" (hand-designed patterns). The generator lays chunks out along the
 // course with a seeded RNG so every level plays the same each time.
+
+import { SONG_COUNT } from './audio.js';
 //
 // Difficulty curve (tuned after the first play-test with a 7-year-old):
 //   levels 1–15  keep the calm pace of the original level 1 while new things
@@ -169,8 +171,10 @@ function buildLevel(row, index) {
       ...base,
       ...(row.colors || {}),
       spiders: Boolean(row.spiders),
-      // small musical variation between levels sharing a theme
+      // small musical variation between levels sharing a theme, and the
+      // three songs rotate so consecutive levels never repeat a tune
       musicTempo: base.musicTempo + (index % 3) * 3 + Math.round(rampFraction(id) * 8),
+      musicSong: index % SONG_COUNT,
     },
     chunks: chunksForRow(row),
     tips: row.tips,

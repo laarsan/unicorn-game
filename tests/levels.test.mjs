@@ -102,3 +102,10 @@ test('big bubbles are spaced so they do not overlap', () => {
     }
   }
 });
+
+test('the three songs rotate across consecutive levels', () => {
+  const songs = LEVELS.map((l) => l.theme.musicSong);
+  assert.equal(new Set(songs).size, 3, 'all three songs are used');
+  for (let i = 1; i < songs.length; i++) assert.notEqual(songs[i], songs[i - 1], `level ${i + 1} changes tune`);
+  assert.deepEqual(songs.slice(0, 6), [0, 1, 2, 0, 1, 2]);
+});

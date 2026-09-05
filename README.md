@@ -43,12 +43,16 @@ färger och namn. De fem första lär ut en sak i taget:
 2. **Molnriket** – bubblor som poppas med musen, och det första hjärtat.
 3. **Godislandet** – ducka under regnbågsbågar.
 4. **Stjärnnatten** – kristaller högt i luften.
-5. **Spindelstaden** – sura moln som kräver filbyte, spindelvännerna svingar sig i bakgrunden.
+5. **Spindelstaden** – sura moln som kräver filbyte, spindelvännerna svingar sig i bakgrunden och ropar "hej!".
 
 Svårighetskurva: bana 1–15 håller samma lugna tempo, bana 16–24 blir lite
 snabbare för varje bana och bana 25 (**Enhörningsslottet**) går fortast.
 Bubblorna är dubbelt så stora på bana 1–15 och krymper sedan till 125 % på
 bana 25. Kurvan ligger i `public/js/levels.js`.
+
+Tre låtar turas om mellan banorna: *Regnbågsgaloppen* (4/4), *Hovarnas dans*
+(galopprytm) och *Regnbågsvalsen* (3/4). Varje värld spelar dem i sin egen
+tonart och sitt eget tempo.
 
 Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.

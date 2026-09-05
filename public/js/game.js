@@ -198,7 +198,7 @@ export class Game {
     if (L.countdownIndex >= COUNTDOWN_STEPS.length) {
       this.ui.hideCountdown();
       this.state = 'playing';
-      this.audio.startMusic({ tempo: L.def.theme.musicTempo, key: L.def.theme.musicKey, wave: L.def.theme.musicWave });
+      this.audio.startMusic({ tempo: L.def.theme.musicTempo, key: L.def.theme.musicKey, wave: L.def.theme.musicWave, song: L.def.theme.musicSong });
       this.audio.duckMusic(0.35);
       if (L.def.tips.includes('move')) this.showTipOnce('move');
       return;
