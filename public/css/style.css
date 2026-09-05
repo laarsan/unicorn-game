@@ -75,13 +75,17 @@ html, body {
 
 .title {
   /* One unbreakable word: a flex row centres it even if it is wider than the
-     card (plain text-align cannot), and the size caps so it fits the card. */
+     card (plain text-align cannot), and the size caps so it fits the card.
+     The line-height must cover the font's full ascent + descent (Comic Sans
+     ≈ 1.39 em): the rainbow is a background clipped to the text, and a
+     background is only painted inside the box – with 1.1 the "g" lost its
+     tail. */
   display: flex;
   justify-content: center;
   white-space: nowrap;
   font-size: clamp(2.4rem, 7vw, 4.6rem);
-  margin: 0 0 0.2em;
-  line-height: 1.1;
+  margin: 0 0 0.05em;
+  line-height: 1.45;
 }
 
 .rainbow-text {

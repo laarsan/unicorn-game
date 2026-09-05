@@ -142,7 +142,14 @@ Målgång: "WOW!"-text, fyrverkerier och dansande enhörning innan resultatkorte
 | Muspekare | Gyllene, regnbågsrandigt enhörningshorn med glitter, 96 px (3× vanlig pekare), spets = klickpunkt; glittersläp följer pekaren | `cursor.js`, renderad SVG i skärmdump |
 | Bubbelljudet för tamt | Pop + "boing" + harpstigning i pentatonisk skala + glitter; varje bubbla i rad börjar ett steg högre | offline-rendering: 0,53 s, topp 0,21 |
 | Mer publik vid målet | 16 figurer till i två rader per sida, några med ballonger, hoppar och vinkar | skärmdump bana 5 |
-| Publikvrål i mål | `crowdRoar`: svällande brus i tre band + kör av "heeey" (flick- och pojkröster) + visslingar + applåder, 3,3 s | offline-rendering |
+| Publikvrål i mål | `crowdRoar`: svällande brus i tre band + kör av "heeey" + visslingar + applåder, 3,3 s — *borttaget efter provspelning 3* | offline-rendering |
 | Ny spelare, progress per namn | Knapp **Ny spelare**, spelar-chips, progress lagras per namn (skiftlägesokänsligt) i `regnbagsgaloppen.v2.players`; gammal progress migreras | `tests/players.test.mjs` + Playwright: Zelda 3 banor, Lars 2, "zelda" → Fortsätt på bana 4 |
 | Ljud när spindelvännerna hänger | "Heey!" från vartannat gungtag när vännen är i bild; röst 1 (vit dräkt) = flicka (340 Hz), 0 och 2 = pojkar (205/150 Hz), stereopanorerat efter läge, 1,2 s spärrtid | bot bana 5: 10 rop utan träffar |
 
+## Provspelning 3 (2026-09-05) — åtgärdat
+
+| Observation | Åtgärd | Verifiering |
+|---|---|---|
+| Publikjublet vid mål lät bara som brus | `crowdRoar` borttaget (anrop och metod). Kvar vid mål: fanfar med kort applåd, fyrverkerier, dans, hoppande publik | offline-rendering: metoden finns inte; bot bana 5 når målskärmen |
+| Spindelvännernas "heey" lät som trötta amöbor | `voice()` omskriven: två stavelser "he-EY" där andra stavelsen hoppar upp en kvart (×1,34) och fortsätter stiga till ×1,5 i slutet, kort H, vibrato bara på "ey", krispigt slut i stället för utfasning. Barnröster: flicka 370 Hz, pojkar 250/200 Hz (var 340/205/150) | offline-rendering med tonhöjdsspårning: flicka 371 → 496 → 531 Hz, pojkar 251 → 334 → 359 och 200 → 266 → 290; längd 0,40–0,49 s; bot bana 5: 9 rop |
+| Titelns nedstapel (g, p) kapades | `.title` line-height 1,1 → 1,45: regnbågen är en bakgrund klippt till texten och målas bara inom boxen, Comic Sans behöver ≈ 1,39 em | mätning 1366 px: box 106,7 px ≥ glyfhöjd 83 px; skärmdump |

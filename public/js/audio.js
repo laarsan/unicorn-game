@@ -116,50 +116,64 @@ export class AudioEngine {
     return node;
   }
 
-  // A tiny "heey!" – a breathy H, then a sawtooth vowel shaped by two formant
-  // filters (E gliding towards I) with a rise-and-fall pitch contour. `pitch`
-  // sets the voice (girl ≈ 330 Hz, boys ≈ 150–200 Hz), `formant` scales the
-  // vocal tract (smaller for the bigger boy).
-  voice({ pitch = 220, formant = 1, start = 0, duration = 0.55, gain = 0.3, pan = 0, vibrato = 5.5 }) {
+  // A cheerful "he-EY!" – a breathy H, then a sawtooth vowel shaped by three
+  // formant filters (E gliding towards I). Two syllables: a short "he" and an
+  // "ey" that leaps up a fourth and keeps rising at the end – the upward
+  // inflection is what makes a call sound happy rather than tired (a falling
+  // glide reads as a sigh). `pitch` sets the voice (children ≈ 250–400 Hz),
+  // `formant` scales the vocal tract (smaller for the bigger boy).
+  voice({ pitch = 260, formant = 1, start = 0, duration = 0.45, gain = 0.3, pan = 0, vibrato = 7 }) {
     if (!this.ctx) return;
     const t0 = this.ctx.currentTime + start;
     const dest = this.panner(pan);
-    // the H
-    this.noise({ start, duration: 0.09, gain: gain * 0.45, filterFreq: 1600 * formant, q: 0.8, dest });
+    const leapAt = t0 + duration * 0.3;      // "he" → "ey"
+    const leapDone = leapAt + 0.05;
+    const tEnd = t0 + duration;
+    // the H – short and light, more of a smile than a sigh
+    this.noise({ start, duration: 0.05, gain: gain * 0.25, filterFreq: 1800 * formant, q: 0.8, dest });
     const osc = this.ctx.createOscillator();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(pitch * 1.12, t0);
-    osc.frequency.exponentialRampToValueAtTime(pitch, t0 + 0.12);
-    osc.frequency.setValueAtTime(pitch, t0 + duration * 0.55);
-    osc.frequency.exponentialRampToValueAtTime(pitch * 0.82, t0 + duration);
+    osc.frequency.setValueAtTime(pitch * 0.9, t0);
+    osc.frequency.exponentialRampToValueAtTime(pitch, t0 + 0.05);
+    osc.frequency.setValueAtTime(pitch, leapAt);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 1.34, leapDone);
+    osc.frequency.setValueAtTime(pitch * 1.34, leapDone + (tEnd - leapDone) * 0.55);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 1.5, tEnd);
+    // vibrato only on the long "ey", where a real voice would wobble
     const lfo = this.ctx.createOscillator();
     lfo.frequency.value = vibrato;
     const lfoGain = this.ctx.createGain();
-    lfoGain.gain.value = pitch * 0.02;
+    lfoGain.gain.setValueAtTime(0, t0);
+    lfoGain.gain.setValueAtTime(0, leapDone);
+    lfoGain.gain.linearRampToValueAtTime(pitch * 0.025, leapDone + 0.1);
     lfo.connect(lfoGain);
     lfoGain.connect(osc.frequency);
     const env = this.ctx.createGain();
     env.gain.setValueAtTime(0.0001, t0);          // (a GainNode defaults to 1 – without this the first 40 ms click)
-    env.gain.setValueAtTime(0.0001, t0 + 0.04);
-    env.gain.exponentialRampToValueAtTime(gain, t0 + 0.1);
-    env.gain.setValueAtTime(gain, t0 + duration * 0.7);
-    env.gain.exponentialRampToValueAtTime(0.0001, t0 + duration + 0.12);
+    env.gain.setValueAtTime(0.0001, t0 + 0.02);
+    env.gain.exponentialRampToValueAtTime(gain * 0.8, t0 + 0.06);
+    env.gain.setValueAtTime(gain * 0.8, leapAt - 0.03);
+    env.gain.exponentialRampToValueAtTime(gain * 0.35, leapAt);   // re-articulation dip between the syllables
+    env.gain.exponentialRampToValueAtTime(gain, leapDone);
+    env.gain.setValueAtTime(gain, tEnd - 0.06);
+    env.gain.exponentialRampToValueAtTime(0.0001, tEnd + 0.06); // crisp stop – no tired fade
     // E → I formants
-    const formants = [[520, 420, 4], [1900, 2300, 5], [2600, 2900, 6]];
+    const formants = [[520, 400, 4], [1900, 2400, 5], [2600, 3000, 6]];
     for (const [f1, f2, q] of formants) {
       const bp = this.ctx.createBiquadFilter();
       bp.type = 'bandpass';
       bp.Q.value = q;
       bp.frequency.setValueAtTime(f1 * formant, t0);
-      bp.frequency.linearRampToValueAtTime(f2 * formant, t0 + duration);
+      bp.frequency.setValueAtTime(f1 * formant, leapAt);
+      bp.frequency.linearRampToValueAtTime(f2 * formant, tEnd);
       osc.connect(bp);
       bp.connect(env);
     }
     env.connect(dest);
     osc.start(t0);
     lfo.start(t0);
-    osc.stop(t0 + duration + 0.2);
-    lfo.stop(t0 + duration + 0.2);
+    osc.stop(tEnd + 0.15);
+    lfo.stop(tEnd + 0.15);
   }
 
   // ----- sound effects -----
@@ -222,57 +236,17 @@ export class AudioEngine {
   }
 
   // The spider friends calling out from their webs. Index 1 (the white suit)
-  // is a girl; 0 and 2 are two different boys.
+  // is a girl; 0 and 2 are two boys – all three are children, so the boys sit
+  // well above a grown man's voice.
   hey(index, pan = 0) {
     // gain differs per voice because the formant filters pass less of a high
     // or very low fundamental – these land all three at roughly the same level
     const presets = [
-      { pitch: 205, formant: 1.0, duration: 0.55, vibrato: 5, gain: 1.0 },
-      { pitch: 340, formant: 1.2, duration: 0.5, vibrato: 6.5, gain: 1.1 },
-      { pitch: 150, formant: 0.88, duration: 0.7, vibrato: 4.5, gain: 1.0 },
+      { pitch: 250, formant: 1.0, duration: 0.45, vibrato: 7, gain: 1.0 },
+      { pitch: 370, formant: 1.2, duration: 0.42, vibrato: 7.5, gain: 1.1 },
+      { pitch: 200, formant: 0.9, duration: 0.5, vibrato: 6.5, gain: 1.0 },
     ];
     this.voice({ ...presets[index % presets.length], pan });
-  }
-
-  // The crowd at the finish line: a swelling roar, a chorus of "heeey!",
-  // whistles and clapping.
-  crowdRoar(duration = 3.2) {
-    if (!this.ctx) return;
-    const t0 = this.ctx.currentTime;
-    for (const [freq, q, gain] of [[520, 0.5, 0.5], [1100, 0.7, 0.28], [220, 0.6, 0.35]]) {
-      const src = this.ctx.createBufferSource();
-      src.buffer = this.noiseBuffer;
-      src.loop = true;
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = freq;
-      filter.Q.value = q;
-      const env = this.ctx.createGain();
-      env.gain.setValueAtTime(0.0001, t0);
-      env.gain.exponentialRampToValueAtTime(gain, t0 + 0.45);
-      env.gain.setValueAtTime(gain, t0 + duration * 0.45);
-      env.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-      src.connect(filter);
-      filter.connect(env);
-      env.connect(this.sfxGain);
-      src.start(t0);
-      src.stop(t0 + duration + 0.05);
-    }
-    for (let i = 0; i < 9; i++) {
-      const girl = i % 2 === 0;
-      this.voice({
-        pitch: girl ? 300 + Math.random() * 90 : 140 + Math.random() * 80,
-        formant: girl ? 1.15 + Math.random() * 0.1 : 0.85 + Math.random() * 0.15,
-        start: 0.1 + Math.random() * 0.5, duration: 0.7 + Math.random() * 0.4, gain: girl ? 0.4 : 0.14,
-        pan: (Math.random() - 0.5) * 1.6, vibrato: 4 + Math.random() * 3,
-      });
-    }
-    for (let i = 0; i < 3; i++) {
-      const start = 0.3 + i * 0.5 + Math.random() * 0.2;
-      this.tone({ freq: 2100, slideTo: 2700, type: 'sine', duration: 0.18, gain: 0.07, start, dest: this.panner((Math.random() - 0.5) * 1.4) });
-      this.tone({ freq: 2700, slideTo: 2000, type: 'sine', duration: 0.22, gain: 0.07, start: start + 0.18 });
-    }
-    this.applause(0.2, duration);
   }
 
   hit() {

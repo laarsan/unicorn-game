@@ -52,7 +52,7 @@ bana 25. Kurvan ligger i `public/js/levels.js`.
 
 Fem hjärtan per bana. Ett hjärta 💖 på banan ger ett extra liv (upp till sju).
 Tar hjärtana slut börjar banan om, men poängen från tidigare banor behålls.
-Vid mål dansar enhörningen medan fyrverkerierna går och publiken vrålar. Efter
+Vid mål dansar enhörningen medan fyrverkerierna går och publiken hoppar. Efter
 bana 25 sparas poängen på topplistan (`data/scores.json`), som finns kvar
 mellan spelomgångar.
 

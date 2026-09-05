@@ -553,7 +553,6 @@ export class Game {
     this.gate.celebrating = true;
     this.audio.stopMusic();
     this.audio.fanfare();
-    this.audio.crowdRoar();
     this.effects.startConfetti(new THREE.Vector3(0, 2, -2), 3.5);
     this.effects.startFireworks(FIREWORKS_SECONDS, () => this.audio.firework());
     this.ui.hideTip();
